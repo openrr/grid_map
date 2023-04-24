@@ -28,6 +28,7 @@ where
     name: String,
     resolution: f32,
     origin: Position,
+    max_point: Position,
     cells: Vec<Cell<T>>,
     size: Size,
 }
@@ -46,6 +47,7 @@ where
             name,
             resolution,
             origin: min_point,
+            max_point,
             cells,
             size,
         }
@@ -82,6 +84,14 @@ where
 
     pub fn height(&self) -> usize {
         self.size.height
+    }
+
+    pub fn origin(&self) -> Position {
+        self.origin
+    }
+
+    pub fn max_point(&self) -> Position {
+        self.max_point
     }
 
     pub fn cell_mut(&mut self, position: &Position) -> Option<&mut Cell<T>> {
