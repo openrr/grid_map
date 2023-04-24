@@ -25,9 +25,8 @@ pub struct GridMap<T>
 where
     T: Clone,
 {
-    name: String,
     resolution: f32,
-    origin: Position,
+    min_point: Position,
     max_point: Position,
     cells: Vec<Cell<T>>,
     size: Size,
@@ -37,31 +36,27 @@ impl<T> GridMap<T>
 where
     T: Clone,
 {
-    pub fn new(name: String, resolution: f32, min_point: Position, max_point: Position) -> Self {
+    pub fn new(min_point: Position, max_point: Position, resolution: f32) -> Self {
         assert!(max_point > min_point);
         let width = ((max_point.x - min_point.x) / resolution) as usize;
         let height = ((max_point.y - min_point.y) / resolution) as usize;
         let size = Size::new(width, height);
         let cells = vec![Cell::Unknown; size.len()];
         GridMap {
-            name,
             resolution,
-            origin: min_point,
+            min_point,
             max_point,
             cells,
             size,
         }
     }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
 
     fn to_index(&self, position: &Position) -> Option<usize> {
-        if position.x < self.origin.x || position.y < self.origin.y {
+        if position.x < self.min_point.x || position.y < self.min_point.y {
             return None;
         }
-        let index = self.size.width * ((position.y - self.origin.y) / self.resolution) as usize
-            + ((position.x - self.origin.x) / self.resolution) as usize;
+        let index = self.size.width * ((position.y - self.min_point.y) / self.resolution) as usize
+            + ((position.x - self.min_point.x) / self.resolution) as usize;
         if self.cells.len() <= index {
             None
         } else {
@@ -86,8 +81,8 @@ where
         self.size.height
     }
 
-    pub fn origin(&self) -> Position {
-        self.origin
+    pub fn min_point(&self) -> Position {
+        self.min_point
     }
 
     pub fn max_point(&self) -> Position {
@@ -120,22 +115,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn name() {
-        let l = GridMap::<f32>::new(
-            "a".to_string(),
-            0.1,
-            Position::new(0.1, 0.2),
-            Position::new(0.5, 0.8),
-        );
-        assert_eq!(l.name, "a");
-    }
-    #[test]
     fn test_to_index() {
         let l = GridMap::<u8>::new(
-            "a".to_string(),
-            0.1,
             Position::new(0.1, 0.2),
             Position::new(0.5, 0.8),
+            0.1,
         );
         assert_eq!(l.to_index(&Position::new(0.3, 0.4)).unwrap(), 10);
         assert_eq!(l.to_index(&Position::new(0.35, 0.4)).unwrap(), 10);
@@ -146,10 +130,9 @@ mod tests {
     #[test]
     fn test_value() {
         let mut l = GridMap::new(
-            "a".to_string(),
-            0.1,
             Position::new(0.1, 0.2),
             Position::new(0.5, 0.8),
+            0.1,
         );
         assert_eq!(l.cell(&Position::new(0.3, 0.4)).unwrap(), Cell::Unknown);
         l.set_value(&Position::new(0.3, 0.4), 1.0).unwrap();

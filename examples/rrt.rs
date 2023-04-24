@@ -4,10 +4,9 @@ use rrt;
 fn main() {
     use grid_map::*;
     let mut map = grid_map::GridMap::<u8>::new(
-        "a".to_string(),
-        0.1,
         Position::new(-1.05, -1.05),
         Position::new(3.05, 1.05),
+        0.1,
     );
     for i in 0..20 {
         map.set_value(&Position::new(0.2 + 0.1 * i as f32, -0.5), 1)
@@ -17,8 +16,8 @@ fn main() {
                 .unwrap();
         }
     }
-    let x_range = Uniform::new(map.origin().x, map.max_point().x);
-    let y_range = Uniform::new(map.origin().y, map.max_point().y);
+    let x_range = Uniform::new(map.min_point().x, map.max_point().x);
+    let y_range = Uniform::new(map.min_point().y, map.max_point().y);
     let result = rrt::dual_rrt_connect(
         &[0.5, -0.8],
         &[2.5, 0.5],

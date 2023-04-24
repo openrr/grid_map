@@ -1,10 +1,9 @@
 fn main() {
     use grid_map::*;
     let mut map = grid_map::GridMap::<u8>::new(
-        "a".to_string(),
-        0.1,
         Position::new(-1.05, -1.05),
         Position::new(3.05, 1.05),
+        0.1,
     );
     for i in 0..10 {
         map.set_value(&Position::new(0.5 + 0.2 * i as f32, -0.5), i)
