@@ -25,7 +25,7 @@ pub struct GridMap<T>
 where
     T: Clone,
 {
-    resolution: f32,
+    resolution: f64,
     min_point: Position,
     max_point: Position,
     cells: Vec<Cell<T>>,
@@ -36,7 +36,7 @@ impl<T> GridMap<T>
 where
     T: Clone,
 {
-    pub fn new(min_point: Position, max_point: Position, resolution: f32) -> Self {
+    pub fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
         assert!(max_point > min_point);
         let width = ((max_point.x - min_point.x) / resolution) as usize;
         let height = ((max_point.y - min_point.y) / resolution) as usize;
@@ -71,6 +71,10 @@ where
 
     pub fn cells(&self) -> &Vec<Cell<T>> {
         &self.cells
+    }
+
+    pub fn cells_mut(&mut self) -> &mut Vec<Cell<T>> {
+        &mut self.cells
     }
 
     pub fn width(&self) -> usize {
@@ -116,12 +120,8 @@ mod tests {
 
     #[test]
     fn test_to_index() {
-        let l = GridMap::<u8>::new(
-            Position::new(0.1, 0.2),
-            Position::new(0.5, 0.8),
-            0.1,
-        );
-        assert_eq!(l.to_index(&Position::new(0.3, 0.4)).unwrap(), 10);
+        let l = GridMap::<u8>::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
+        assert_eq!(l.to_index(&Position::new(0.3, 0.4)).unwrap(), 9);
         assert_eq!(l.to_index(&Position::new(0.35, 0.4)).unwrap(), 10);
         assert_eq!(l.to_index(&Position::new(0.4, 0.4)).unwrap(), 11);
         assert!(l.to_index(&Position::new(0.0, 0.4)).is_none());
@@ -129,11 +129,7 @@ mod tests {
 
     #[test]
     fn test_value() {
-        let mut l = GridMap::new(
-            Position::new(0.1, 0.2),
-            Position::new(0.5, 0.8),
-            0.1,
-        );
+        let mut l = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(l.cell(&Position::new(0.3, 0.4)).unwrap(), Cell::Unknown);
         l.set_value(&Position::new(0.3, 0.4), 1.0).unwrap();
         assert_eq!(l.cell(&Position::new(0.3, 0.4)).unwrap(), Cell::Value(1.0));

@@ -26,4 +26,7 @@ where
             _ => None,
         }
     }
+    pub fn from_value(value: T) -> Self {
+        Self::Value(value)
+    }
 }

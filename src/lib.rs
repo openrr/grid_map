@@ -1,8 +1,11 @@
 mod cell;
+mod error;
 mod grid_map;
 mod layered_grid_map;
 mod position;
+pub mod utils;
 pub use crate::cell::*;
+pub use crate::error::*;
 pub use crate::grid_map::*;
 pub use crate::layered_grid_map::*;
 pub use crate::position::*;
