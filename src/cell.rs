@@ -3,7 +3,9 @@ pub enum Cell<T>
 where
     T: Clone,
 {
+    Uninitialized,
     Unknown,
+    Obstacle,
     Value(T),
 }
 
@@ -12,7 +14,7 @@ where
     T: Clone,
 {
     fn default() -> Self {
-        Cell::Unknown
+        Cell::Uninitialized
     }
 }
 
