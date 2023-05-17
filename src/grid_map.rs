@@ -52,7 +52,7 @@ where
         }
     }
 
-    fn to_index_by_position(&self, position: &Position) -> Option<usize> {
+    pub fn to_index_by_position(&self, position: &Position) -> Option<usize> {
         if position.x < self.min_point.x || position.y < self.min_point.y {
             return None;
         }
@@ -65,7 +65,7 @@ where
         }
     }
 
-    fn to_index_by_indices(&self, indices: &Indices) -> Option<usize> {
+    pub fn to_index_by_indices(&self, indices: &Indices) -> Option<usize> {
         if indices.x >= self.width() || indices.y >= self.height() {
             return None;
         }
@@ -87,7 +87,11 @@ where
     pub fn cells(&self) -> &Vec<Cell<T>> {
         &self.cells
     }
-
+ 
+    pub fn len(&self) -> usize {
+        self.cells.len()
+    }
+ 
     pub fn cells_mut(&mut self) -> &mut Vec<Cell<T>> {
         &mut self.cells
     }
@@ -126,6 +130,11 @@ where
 
     pub fn set_value_by_position(&mut self, position: &Position, value: T) -> Option<()> {
         *self.cell_by_position_mut(position)? = Cell::Value(value);
+        Some(())
+    }
+
+    pub fn set_value_by_indices(&mut self, indices: &Indices, value: T) -> Option<()> {
+        *self.cell_by_indices_mut(position)? = Cell::Value(value);
         Some(())
     }
 
