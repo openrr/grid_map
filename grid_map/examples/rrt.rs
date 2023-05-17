@@ -29,7 +29,8 @@ fn main() {
     .unwrap();
 
     for p in result {
-        map.set_value_by_position(&Position::new(p[0], p[1]), 0).unwrap();
+        map.set_value_by_position(&Position::new(p[0], p[1]), 0)
+            .unwrap();
     }
     for i in 0..map.height() {
         for j in 0..map.width() {

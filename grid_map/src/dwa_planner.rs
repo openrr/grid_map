@@ -23,7 +23,8 @@ pub struct DwaPlanner {
 }
 
 impl DwaPlanner {
-    pub fn new(max_velocity: Velocity,
+    pub fn new(
+        max_velocity: Velocity,
         max_accel: Acceleration,
         min_velocity: Velocity,
         min_accel: Acceleration,
@@ -40,7 +41,7 @@ impl DwaPlanner {
         }
     }
 
-    fn sample_velocity(&self, current_velocity: &Velocity) -> Vec<Velocity> {
+    pub(crate) fn sample_velocity(&self, current_velocity: &Velocity) -> Vec<Velocity> {
         let max_x_limit = current_velocity.x + self.max_accel.x * self.controller_dt;
         let min_x_limit = current_velocity.x + self.min_accel.x * self.controller_dt;
         let max_theta_limit = current_velocity.theta + self.max_accel.theta * self.controller_dt;

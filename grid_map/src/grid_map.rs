@@ -1,6 +1,6 @@
 use crate::cell::Cell;
-use crate::position::Position;
 use crate::indices::Indices;
+use crate::position::Position;
 
 /// Size of the map
 #[derive(Copy, Clone, Debug, Default)]
@@ -87,11 +87,11 @@ where
     pub fn cells(&self) -> &Vec<Cell<T>> {
         &self.cells
     }
- 
+
     pub fn len(&self) -> usize {
         self.cells.len()
     }
- 
+
     pub fn cells_mut(&mut self) -> &mut Vec<Cell<T>> {
         &mut self.cells
     }
@@ -134,7 +134,7 @@ where
     }
 
     pub fn set_value_by_indices(&mut self, indices: &Indices, value: T) -> Option<()> {
-        *self.cell_by_indices_mut(position)? = Cell::Value(value);
+        *self.cell_by_indices_mut(indices)? = Cell::Value(value);
         Some(())
     }
 
@@ -147,10 +147,17 @@ where
     }
 
     pub fn copy_without_value(&self) -> Self {
-        let cells: Vec<_> = self.cells.iter().map(
-            |c|
-            if matches!(c, Cell::Value(_)) { Cell::Uninitialized } else { c.to_owned()}
-        ).collect();
+        let cells: Vec<_> = self
+            .cells
+            .iter()
+            .map(|c| {
+                if matches!(c, Cell::Value(_)) {
+                    Cell::Uninitialized
+                } else {
+                    c.to_owned()
+                }
+            })
+            .collect();
 
         Self {
             resolution: self.resolution,
@@ -170,16 +177,29 @@ mod tests {
     fn test_to_index() {
         let l = GridMap::<u8>::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(l.to_index_by_position(&Position::new(0.3, 0.4)).unwrap(), 9);
-        assert_eq!(l.to_index_by_position(&Position::new(0.35, 0.4)).unwrap(), 10);
-        assert_eq!(l.to_index_by_position(&Position::new(0.4, 0.4)).unwrap(), 11);
+        assert_eq!(
+            l.to_index_by_position(&Position::new(0.35, 0.4)).unwrap(),
+            10
+        );
+        assert_eq!(
+            l.to_index_by_position(&Position::new(0.4, 0.4)).unwrap(),
+            11
+        );
         assert!(l.to_index_by_position(&Position::new(0.0, 0.4)).is_none());
     }
 
     #[test]
     fn test_value() {
         let mut l = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
-        assert_eq!(l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(), Cell::Unknown);
-        l.set_value_by_position(&Position::new(0.3, 0.4), 1.0).unwrap();
-        assert_eq!(l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(), Cell::Value(1.0));
+        assert_eq!(
+            l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(),
+            Cell::Unknown
+        );
+        l.set_value_by_position(&Position::new(0.3, 0.4), 1.0)
+            .unwrap();
+        assert_eq!(
+            l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(),
+            Cell::Value(1.0)
+        );
     }
 }

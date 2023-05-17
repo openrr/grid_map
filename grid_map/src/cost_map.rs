@@ -1,4 +1,4 @@
-use crate::{Indices, GridMap, Cell};
+use crate::{Cell, GridMap, Indices};
 
 pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     let mut path_distance_map = map.copy_without_value();
@@ -11,10 +11,12 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     path_distance_map
 }
 
-pub fn path_distance_map_internal(map: &mut GridMap<u8>, 
+pub fn path_distance_map_internal(
+    map: &mut GridMap<u8>,
     previous_indices: &[Indices],
     previous_value: u8,
-    updated: &mut [bool]) -> bool {
+    updated: &mut [bool],
+) -> bool {
     // all is true, finish.
     if updated.iter().any(|v| *v == false) {
         return true;
@@ -30,16 +32,17 @@ pub fn path_distance_map_internal(map: &mut GridMap<u8>,
         if updated[opt_index.unwrap()] {
             continue;
         }
-            for neighbor in ind.neighbors4() {
-                let mut opt_cell = map.cell_by_indices_mut(&neighbor);
-                if opt_cell.is_some() {
-                    let mut cell = opt_cell.unwrap();
-                    cell = Cell::Value(current_value);
-                    let index = map.to_index_by_indices(ind).unwrap();
-                    updated[index] = true;
-                    current_indices.push(neighbor);
-                }
+        for neighbor in ind.neighbors4() {
+            let mut opt_cell = map.cell_by_indices_mut(&neighbor);
+            if opt_cell.is_none() {
+                continue;
             }
+            let cell = opt_cell.as_mut().unwrap();
+            **cell = Cell::Value(current_value);
+            let index = map.to_index_by_indices(ind).unwrap();
+            updated[index] = true;
+            current_indices.push(neighbor);
+        }
     }
     path_distance_map_internal(map, &current_indices, current_value, updated)
 }

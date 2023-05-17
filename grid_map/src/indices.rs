@@ -12,10 +12,10 @@ impl Indices {
     /// Returns neighbor indices Up/Down/Left/Right
     pub fn neighbors4(&self) -> [Self; 4] {
         [
-            Self::new(self.x, y + 1),
-            Self::new(self.x, y - 1),
-            Self::new(self.x + 1, y),
-            Self::new(self.x - 1, y),
+            Self::new(self.x, self.y + 1),
+            Self::new(self.x, self.y - 1),
+            Self::new(self.x + 1, self.y),
+            Self::new(self.x - 1, self.y),
         ]
     }
 }
