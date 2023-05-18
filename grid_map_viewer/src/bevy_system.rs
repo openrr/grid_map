@@ -57,8 +57,7 @@ pub fn bevy_ui_system_for_arc2(
             let dynamic_grid_map = grid_map.0.lock();
             let dynamic_robot_path = robot_path.0.lock();
 
-            let poly = parse_grid_map_to_polygon(&dynamic_grid_map);
-            for p in poly {
+            for p in parse_grid_map_to_polygon(&dynamic_grid_map) {
                 plot_ui.polygon(p);
             }
 

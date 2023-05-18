@@ -13,18 +13,19 @@ pub fn new_grid_map_with_ros_navigation_costmap(occupancy_grid: OccupancyGrid) -
     let origin = occupancy_grid.info.origin;
 
     let min_point = Position {
-        x: -origin.position.x,
-        y: -origin.position.y,
+        x: origin.position.x,
+        y: origin.position.y,
     };
     let max_point = Position {
-        x: width as f64 * resolution - origin.position.x,
-        y: height as f64 * resolution - origin.position.y,
+        x: width as f64 * resolution + origin.position.x,
+        y: height as f64 * resolution + origin.position.y,
     };
 
     let mut renew_grid_map = GridMap::<u8>::new(min_point, max_point, resolution);
 
     let _ = occupancy_grid.data.iter().enumerate().map(|(i, &d)| {
         let index = Indices::new(i % renew_grid_map.width(), i / renew_grid_map.width());
+        println!("index: {:?}", index);
         if d == -1 {
             renew_grid_map.set_cell_by_indices(&index, Cell::Unknown);
         } else if (0..=100).contains(&d) {
