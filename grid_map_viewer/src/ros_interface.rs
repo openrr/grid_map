@@ -1,11 +1,14 @@
 use arci::{nalgebra::Quaternion, Isometry2};
-use grid_map::{Cell, GridMap, Indices, Position, RobotPath};
+use grid_map::{Cell, GridMap, Position, RobotPath};
 use rosrust_msg::{
     map_msgs::OccupancyGridUpdate,
     nav_msgs::{self, OccupancyGrid},
 };
 
-pub fn new_grid_map_with_ros_navigation_costmap(occupancy_grid: OccupancyGrid) -> GridMap<u8> {
+pub fn update_grid_map_with_ros_navigation_costmap(
+    grid_map: &mut GridMap<u8>,
+    occupancy_grid: OccupancyGrid,
+) {
     let resolution = occupancy_grid.info.resolution as f64;
 
     let width = occupancy_grid.info.width as usize;
@@ -21,41 +24,44 @@ pub fn new_grid_map_with_ros_navigation_costmap(occupancy_grid: OccupancyGrid) -
         y: height as f64 * resolution + origin.position.y,
     };
 
-    let mut renew_grid_map = GridMap::<u8>::new(min_point, max_point, resolution);
+    grid_map.renew(min_point, max_point, resolution);
 
-    let _ = occupancy_grid.data.iter().enumerate().map(|(i, &d)| {
-        let index = Indices::new(i % renew_grid_map.width(), i / renew_grid_map.width());
-        println!("index: {:?}", index);
-        if d == -1 {
-            renew_grid_map.set_cell_by_indices(&index, Cell::Unknown);
-        } else if (0..=100).contains(&d) {
-            renew_grid_map.set_cell_by_indices(&index, Cell::Value(d as u8));
-        } else {
-            renew_grid_map.set_cell_by_indices(&index, Cell::Unknown);
-        }
-    });
+    let cells: Vec<Cell<u8>> = occupancy_grid
+        .data
+        .iter()
+        .map(|&d| {
+            if d == -1 {
+                Cell::Unknown
+            } else if (0..=100).contains(&d) {
+                Cell::Value(d as u8)
+            } else {
+                Cell::Unknown
+            }
+        })
+        .collect();
 
-    GridMap::new(min_point, max_point, resolution)
+    *grid_map.cells_mut() = cells;
 }
 
 pub fn update_grid_map_with_ros_navigation_costmap_update(
     grid_map: &mut GridMap<u8>,
     occupancy_grid_update: OccupancyGridUpdate,
 ) {
-    let _ = occupancy_grid_update
+    let cells: Vec<Cell<u8>> = occupancy_grid_update
         .data
         .iter()
-        .enumerate()
-        .map(|(i, &d)| {
-            let index = Indices::new(i % grid_map.width(), i / grid_map.width());
+        .map(|&d| {
             if d == -1 {
-                grid_map.set_cell_by_indices(&index, Cell::Unknown);
+                Cell::Unknown
             } else if (0..=100).contains(&d) {
-                grid_map.set_cell_by_indices(&index, Cell::Value(d as u8));
+                Cell::Value(d as u8)
             } else {
-                grid_map.set_cell_by_indices(&index, Cell::Unknown);
+                Cell::Unknown
             }
-        });
+        })
+        .collect();
+
+    *grid_map.cells_mut() = cells;
 }
 
 pub fn update_robot_path_with_ros_navigation_path(

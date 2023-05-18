@@ -4,7 +4,7 @@ fn main() {
     use bevy_egui::EguiPlugin;
     use grid_map::{GridMap, Position};
     use grid_map_viewer::{
-        bevy_ui_system_for_arc, new_grid_map_with_ros_navigation_costmap,
+        bevy_ui_system_for_arc, update_grid_map_with_ros_navigation_costmap,
         update_grid_map_with_ros_navigation_costmap_update, ArcGridMap,
     };
     use parking_lot::Mutex;
@@ -32,10 +32,10 @@ fn main() {
     let dynamic_grid_map = Arc::clone(&grid_map);
     let _grid_sub = rosrust::subscribe(
         "/move_base/local_costmap/costmap",
-        2,
+        1,
         move |msg: OccupancyGrid| {
             let mut updated_grid_map = dynamic_grid_map.lock();
-            *updated_grid_map = new_grid_map_with_ros_navigation_costmap(msg);
+            update_grid_map_with_ros_navigation_costmap(&mut updated_grid_map, msg);
         },
     )
     .unwrap();
@@ -43,7 +43,7 @@ fn main() {
     let dynamic_grid_map_updated = Arc::clone(&grid_map);
     let _grid_update_sub = rosrust::subscribe(
         "/move_base/local_costmap/costmap_updates",
-        2,
+        1,
         move |msg: OccupancyGridUpdate| {
             let mut updated_grid_map_updated = dynamic_grid_map_updated.lock();
             update_grid_map_with_ros_navigation_costmap_update(&mut updated_grid_map_updated, msg);

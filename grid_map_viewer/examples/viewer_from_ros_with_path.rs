@@ -32,10 +32,10 @@ fn main() {
     let dynamic_grid_map = Arc::clone(&grid_map);
     let _grid_sub = rosrust::subscribe(
         "/move_base/local_costmap/costmap",
-        2,
+        1,
         move |msg: OccupancyGrid| {
             let mut updated_grid_map = dynamic_grid_map.lock();
-            *updated_grid_map = new_grid_map_with_ros_navigation_costmap(msg);
+            update_grid_map_with_ros_navigation_costmap(&mut updated_grid_map, msg);
         },
     )
     .unwrap();
@@ -44,7 +44,7 @@ fn main() {
     let dynamic_grid_map_updated = Arc::clone(&grid_map);
     let _grid_update_sub = rosrust::subscribe(
         "/move_base/local_costmap/costmap_updates",
-        2,
+        1,
         move |msg: OccupancyGridUpdate| {
             let mut updated_grid_map_updated = dynamic_grid_map_updated.lock();
             update_grid_map_with_ros_navigation_costmap_update(&mut updated_grid_map_updated, msg);
@@ -55,7 +55,7 @@ fn main() {
     // Local path subscriber
     let dynamic_robot_path = Arc::clone(&robot_path);
     let _robot_path_sub =
-        rosrust::subscribe("/move_base/DWAPlannerROS/local_plan", 2, move |msg| {
+        rosrust::subscribe("/move_base/DWAPlannerROS/local_plan", 1, move |msg| {
             let mut updated_robot_path = dynamic_robot_path.lock();
             update_robot_path_with_ros_navigation_path(&mut updated_robot_path, msg);
         });

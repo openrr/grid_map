@@ -54,6 +54,20 @@ where
         }
     }
 
+    pub fn renew(&mut self, min_point: Position, max_point: Position, resolution: f64) {
+        assert!(max_point > min_point);
+        let width = ((max_point.x - min_point.x) / resolution) as usize;
+        let height = ((max_point.y - min_point.y) / resolution) as usize;
+        let size = Size::new(width, height);
+        let cells = vec![Cell::Unknown; size.len()];
+
+        self.resolution = resolution;
+        self.min_point = min_point;
+        self.max_point = max_point;
+        self.cells = cells;
+        self.size = size;
+    }
+
     pub fn to_index_by_position(&self, position: &Position) -> Option<usize> {
         if position.x < self.min_point.x || position.y < self.min_point.y {
             return None;
