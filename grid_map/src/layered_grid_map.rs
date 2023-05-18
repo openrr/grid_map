@@ -16,10 +16,16 @@ where
     pub fn add_layer(&mut self, name: String, map: GridMap<T>) {
         self.maps.insert(name, map);
     }
+
     pub fn layer(&self, name: &str) -> Option<&GridMap<T>> {
         self.maps.get(name)
     }
+
     pub fn layer_mut(&mut self, name: &str) -> Option<&mut GridMap<T>> {
         self.maps.get_mut(name)
+    }
+
+    pub fn layer_as_iter(&self) -> impl Iterator<Item = (&String, &GridMap<T>)> {
+        self.maps.iter()
     }
 }
