@@ -1,21 +1,13 @@
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum Cell<T>
 where
     T: Clone,
 {
+    #[default]
     Uninitialized,
     Unknown,
     Obstacle,
     Value(T),
-}
-
-impl<T> Default for Cell<T>
-where
-    T: Clone,
-{
-    fn default() -> Self {
-        Cell::Uninitialized
-    }
 }
 
 impl<T> Cell<T>

@@ -5,4 +5,16 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+ros = ["rosrust", "rosrust_msg"]
+
 [dependencies]
+arci = "0.1.0"
+bevy = "0.9"
+bevy_egui = "0.19"
+egui = "0.20"
+grid_map = { path = "../grid_map" }
+parking_lot = "0.12"
+rosrust = { version = "0.9", optional = true }
+rosrust_msg = { version = "0.1", optional = true }
+thiserror = "1"

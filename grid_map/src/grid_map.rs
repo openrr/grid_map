@@ -2,6 +2,8 @@ use crate::cell::Cell;
 use crate::indices::Indices;
 use crate::position::Position;
 
+use std::fmt::Debug;
+
 /// Size of the map
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Size {
@@ -138,6 +140,16 @@ where
         Some(())
     }
 
+    pub fn set_cell_by_position(&mut self, position: &Position, cell: Cell<T>) -> Option<()> {
+        *self.cell_by_position_mut(position)? = cell;
+        Some(())
+    }
+
+    pub fn set_cell_by_indices(&mut self, indices: &Indices, cell: Cell<T>) -> Option<()> {
+        *self.cell_by_indices_mut(indices)? = cell;
+        Some(())
+    }
+
     pub fn value_by_position(&mut self, position: &Position) -> Option<T> {
         if let Cell::Value(value) = self.cell_by_position(position)? {
             Some(value)
@@ -166,6 +178,29 @@ where
             cells,
             size: self.size,
         }
+    }
+
+    pub fn resolution(&self) -> f64 {
+        self.resolution
+    }
+}
+
+impl<T> std::fmt::Display for GridMap<T>
+where
+    T: Clone + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut displayed = String::new();
+        for i in 0..self.height() {
+            for j in 0..self.width() {
+                match self.cells()[i * self.width() + j].value() {
+                    Some(v) => displayed = format!("{}{:?}", displayed, v),
+                    None => displayed = format!("{}-", displayed),
+                }
+            }
+            displayed = format!("{}\n", displayed);
+        }
+        write!(f, "{}", displayed)
     }
 }
 
