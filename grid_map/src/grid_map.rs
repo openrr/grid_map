@@ -42,7 +42,7 @@ where
         let width = ((max_point.x - min_point.x) / resolution) as usize;
         let height = ((max_point.y - min_point.y) / resolution) as usize;
         let size = Size::new(width, height);
-        let cells = vec![Cell::Unknown; size.len()];
+        let cells = vec![Cell::Uninitialized; size.len()];
         GridMap {
             resolution,
             min_point,
@@ -70,6 +70,31 @@ where
             return None;
         }
         Some(self.size.width * indices.y + indices.x)
+    }
+
+    /// convert Indices into index
+    /// 
+    /// ```
+    /// use grid_map::*;
+    /// let map = GridMap::<u8>::new(Position::new(0.0, 0.0), Position::new(1.0, 1.0), 0.1);
+    /// let ind = map.to_index_by_indices(&Indices { x : 5, y: 2}).unwrap();
+    /// let xy = map.to_indices_from_index(ind).unwrap();
+    /// assert_eq!(xy.x, 5);
+    /// assert_eq!(xy.y, 2);
+    /// ```
+    pub fn to_indices_from_index(&self, index: usize) -> Option<Indices> {
+        if index >= self.len() {
+            return None;
+        }
+        let rows = index / self.size.width;
+        let cols = index - rows * self.size.width;
+        Some(Indices { x: cols, y: rows })
+    }
+
+    /// Convert position into indices
+    pub fn position_to_indices(&self, position: &Position) -> Option<Indices> {
+        let index = self.to_index_by_position(position)?;
+        self.to_indices_from_index(index)
     }
 
     // Get cell by raw position
@@ -138,6 +163,16 @@ where
         Some(())
     }
 
+    pub fn set_obstacle_by_position(&mut self, position: &Position) -> Option<()> {
+        *self.cell_by_position_mut(position)? = Cell::Obstacle;
+        Some(())
+    }
+
+    pub fn set_obstacle_by_indices(&mut self, indices: &Indices) -> Option<()> {
+        *self.cell_by_indices_mut(indices)? = Cell::Obstacle;
+        Some(())
+    }
+
     pub fn value_by_position(&mut self, position: &Position) -> Option<T> {
         if let Cell::Value(value) = self.cell_by_position(position)? {
             Some(value)
@@ -193,7 +228,7 @@ mod tests {
         let mut l = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(
             l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(),
-            Cell::Unknown
+            Cell::Uninitialized
         );
         l.set_value_by_position(&Position::new(0.3, 0.4), 1.0)
             .unwrap();

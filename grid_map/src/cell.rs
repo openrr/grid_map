@@ -28,6 +28,25 @@ where
             _ => None,
         }
     }
+    pub fn has_value(&self) -> bool {
+        match self {
+            Self::Value(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_uninitialized(&self) -> bool {
+        match self {
+            Self::Uninitialized => true,
+            _ => false,
+        }
+    }
+    pub fn is_obstacle(&self) -> bool {
+        match self {
+            Self::Obstacle => true,
+            _ => false,
+        }
+    }
+
     pub fn from_value(value: T) -> Self {
         Self::Value(value)
     }

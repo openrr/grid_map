@@ -10,13 +10,17 @@ impl Indices {
         Self { x, y }
     }
     /// Returns neighbor indices Up/Down/Left/Right
-    pub fn neighbors4(&self) -> [Self; 4] {
-        [
+    pub fn neighbors4(&self) -> Vec<Self> {
+        let mut neighbors = vec![
             Self::new(self.x, self.y + 1),
-            Self::new(self.x, self.y - 1),
-            Self::new(self.x + 1, self.y),
-            Self::new(self.x - 1, self.y),
-        ]
+            Self::new(self.x + 1, self.y)];
+        if self.x != 0 {
+            neighbors.push(Self::new(self.x - 1, self.y));
+        }
+        if self.y != 0 {
+            neighbors.push(Self::new(self.x, self.y - 1));
+        }
+        neighbors
     }
 }
 
