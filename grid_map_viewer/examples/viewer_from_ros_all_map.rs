@@ -48,10 +48,10 @@ fn main() {
         "/move_base/local_costmap/costmap",
         1,
         move |msg: OccupancyGrid| {
-            let map = dynamic_local_map.lock();
+            let mut map = dynamic_local_map.lock();
             let mut costmap = map.local_map().layer("costmap").unwrap().clone();
             update_grid_map_with_ros_navigation_costmap(&mut costmap, msg);
-            let _ = map.local_map().layer("costmap").insert(&mut costmap);
+            map.update_local_map("costmap".to_owned(), costmap);
         },
     )
     .unwrap();
@@ -62,10 +62,10 @@ fn main() {
         "/move_base/local_costmap/costmap_updates",
         1,
         move |msg: OccupancyGridUpdate| {
-            let map = dynamic_local_map_updated.lock();
+            let mut map = dynamic_local_map_updated.lock();
             let mut costmap = map.local_map().layer("costmap").unwrap().clone();
             update_grid_map_with_ros_navigation_costmap_update(&mut costmap, msg);
-            let _ = map.local_map().layer("costmap").insert(&mut costmap);
+            map.update_local_map("costmap".to_owned(), costmap);
         },
     )
     .unwrap();
@@ -76,10 +76,10 @@ fn main() {
         "/move_base/global_costmap/costmap",
         1,
         move |msg: OccupancyGrid| {
-            let map = dynamic_global_map.lock();
+            let mut map = dynamic_global_map.lock();
             let mut costmap = map.global_map().layer("costmap").unwrap().clone();
             update_grid_map_with_ros_navigation_costmap(&mut costmap, msg);
-            let _ = map.global_map().layer("costmap").insert(&mut costmap);
+            map.update_global_map("costmap".to_owned(), costmap);
         },
     )
     .unwrap();
@@ -90,9 +90,10 @@ fn main() {
         "/move_base/global_costmap/costmap_updates",
         1,
         move |msg: OccupancyGridUpdate| {
-            let map = dynamic_global_map_updated.lock();
+            let mut map = dynamic_global_map_updated.lock();
             let mut costmap = map.global_map().layer("costmap").unwrap().clone();
             update_grid_map_with_ros_navigation_costmap_update(&mut costmap, msg);
+            map.update_global_map("costmap".to_owned(), costmap);
         },
     )
     .unwrap();
