@@ -34,7 +34,11 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
     for y in 0..distance_map.height() {
         for x in 0..distance_map.width() {
             let indices = Indices { x, y };
-            if distance_map.cell_by_indices(&indices).unwrap().is_obstacle() {
+            if distance_map
+                .cell_by_indices(&indices)
+                .unwrap()
+                .is_obstacle()
+            {
                 obstacle_indices.push(indices);
             }
         }

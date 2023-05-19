@@ -73,7 +73,7 @@ where
     }
 
     /// convert Indices into index
-    /// 
+    ///
     /// ```
     /// use grid_map::*;
     /// let map = GridMap::<u8>::new(Position::new(0.0, 0.0), Position::new(1.0, 1.0), 0.1);
