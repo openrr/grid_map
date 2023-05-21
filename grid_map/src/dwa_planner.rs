@@ -30,6 +30,7 @@ pub struct Plan {
 }
 
 #[derive(Debug, Clone, Default)]
+/// DWA Planner
 pub struct DwaPlanner {
     max_velocity: Velocity,
     max_accel: Acceleration,
@@ -151,5 +152,97 @@ impl DwaPlanner {
             }
         }
         selected_plan
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use na::Vector2;
+
+    use crate::*;
+    use crate::dwa_planner::*;
+    use crate::utils::show_ascii_map;
+    #[test]
+    fn path_distance_map_test() {
+        use rand::distributions::{Distribution, Uniform};
+        use rrt;
+        let mut map = grid_map::GridMap::<u8>::new(
+            Position::new(-1.05, -1.05),
+            Position::new(3.05, 1.05),
+            0.1,
+        );
+        for i in 0..20 {
+            map.set_obstacle_by_position(&Position::new(0.2 + 0.1 * i as f64, -0.5))
+                .unwrap();
+            for j in 0..10 {
+                map.set_obstacle_by_position(&Position::new(0.1 * i as f64, -0.2 + 0.1 * j as f64))
+                    .unwrap();
+            }
+        }
+        let x_range = Uniform::new(map.min_point().x, map.max_point().x);
+        let y_range = Uniform::new(map.min_point().y, map.max_point().y);
+        let start = [0.5, -0.8];
+        let goal = [2.5, 0.5];
+        let result = rrt::dual_rrt_connect(
+            &start,
+            &goal,
+            |p: &[f64]| {
+                !matches!(
+                    map.cell_by_position(&Position::new(p[0], p[1])).unwrap(),
+                    Cell::Obstacle
+                )
+            },
+            || {
+                let mut rng = rand::thread_rng();
+                vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
+            },
+            0.05,
+            1000,
+        )
+        .unwrap();
+
+        let path_indices = result
+            .iter()
+            .map(|p| {
+                map.to_index_by_position(&Position::new(p[0], p[1]))
+                    .unwrap()
+            })
+            .map(|index| map.to_indices_from_index(index).unwrap())
+            .collect::<Vec<_>>();
+        for p in result {
+            map.set_value_by_position(&Position::new(p[0], p[1]), 0)
+                .unwrap();
+        }
+        let path_distance_map = path_distance_map(&map, &path_indices);
+        show_ascii_map(&path_distance_map, 1.0);
+        println!("=======================");
+        let goal_indices = map
+            .position_to_indices(&Position::new(goal[0], goal[1]))
+            .unwrap();
+        let goal_distance_map = goal_distance_map(&map, &goal_indices);
+        show_ascii_map(&goal_distance_map, 1.0);
+        println!("=======================");
+        let obstacle_distance_map = obstacle_distance_map(&map);
+        show_ascii_map(&obstacle_distance_map, 0.03);
+        let mut maps = HashMap::new();
+        maps.insert("path".to_owned(), path_distance_map);
+        maps.insert("goal".to_owned(), goal_distance_map);
+        maps.insert("obstacle".to_owned(), obstacle_distance_map);
+        let layered = LayeredGridMap::new(maps);
+        let mut weights = HashMap::new();
+        weights.insert("path".to_owned(), 0.1);
+        weights.insert("goal".to_owned(), 0.1);
+        weights.insert("obstacle".to_owned(), 0.03);
+        
+        let planner = DwaPlanner::new(Velocity { x: 0.1, theta: 0.3}, Acceleration { x: 0.2, theta: 0.6},
+            Velocity { x: 0.0, theta: -0.3}, Acceleration { x: -0.2, theta: -0.6},
+            weights, 0.1, 3.0, 5);
+        let plan = planner.plan_local_path(&Pose::new(Vector2::new(start[0], start[1]),
+         0.0), &Velocity { x: 0.0, theta: 0.0 }, &layered);
+         println!("vel = {:?}", plan.velocity);
+
     }
 }

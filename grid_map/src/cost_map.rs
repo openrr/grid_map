@@ -1,5 +1,6 @@
 use crate::{Cell, GridMap, Indices};
 
+/// Create path distance map
 pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     let mut path_distance_map = map.copy_without_value();
     for ind in path {
@@ -15,6 +16,8 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     path_distance_map
 }
 
+
+/// Create goal distance map
 pub fn goal_distance_map(map: &GridMap<u8>, goal: &Indices) -> GridMap<u8> {
     let mut goal_distance_map = map.copy_without_value();
     goal_distance_map.set_value_by_indices(goal, 0).unwrap();
@@ -28,6 +31,7 @@ pub fn goal_distance_map(map: &GridMap<u8>, goal: &Indices) -> GridMap<u8> {
     goal_distance_map
 }
 
+/// Create obstacle distance map
 pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
     let mut distance_map = map.copy_without_value();
     let mut obstacle_indices = vec![];
@@ -101,28 +105,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::*;
-
-    fn show_ascii_map(map: &GridMap<u8>, scale: f32) {
-        for i in 0..map.height() {
-            for j in 0..map.width() {
-                let letter = match map.cells()[i * map.width() + j] {
-                    Cell::Value(v) => {
-                        let v = (v as f32 * scale) as u8;
-                        if v <= 9 {
-                            format!("{v}")
-                        } else {
-                            "9".to_owned()
-                        }
-                    }
-                    Cell::Obstacle => "x".to_owned(),
-                    Cell::Uninitialized => "u".to_owned(),
-                    Cell::Unknown => "?".to_owned(),
-                };
-                print!("{letter:}");
-            }
-            println!("");
-        }
-    }
+    use crate::utils::show_ascii_map;
     #[test]
     fn path_distance_map_test() {
         use rand::distributions::{Distribution, Uniform};
