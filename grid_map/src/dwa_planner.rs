@@ -16,6 +16,13 @@ pub struct Acceleration {
 
 pub type Pose = na::Isometry2<f64>;
 
+fn velocity_to_pose(velocity: &Velocity, dt: f64) -> Pose {
+    Pose::new(
+        na::Vector2::new(velocity.x * dt, 0.0),
+        velocity.theta * dt,
+    )
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Plan {
     pub velocity: Velocity,
@@ -101,19 +108,19 @@ impl DwaPlanner {
         velocities
     }
     fn forward_simulation(&self, current_pose: &Pose, target_velocity: &Velocity) -> Vec<Pose> {
-        let diff = Pose::new(
-            na::Vector2::new(target_velocity.x * self.controller_dt, 0.0),
-            target_velocity.theta * self.controller_dt,
-        );
+        let mut last_pose = current_pose.to_owned();
+        let diff = velocity_to_pose(target_velocity, self.controller_dt);
         let mut poses = vec![];
         for _ in 0..(self.simulation_duration / self.controller_dt) as usize {
-            poses.push(current_pose * diff);
+            let next_pose = last_pose * diff;
+            poses.push(next_pose);
+            last_pose = next_pose;
         }
         poses
     }
     pub fn plan_local_path(
         &self,
-        current_pose: &na::Isometry2<f64>,
+        current_pose: &Pose,
         current_velocity: &Velocity,
         maps: &LayeredGridMap<u8>,
     ) -> Plan {
