@@ -47,7 +47,7 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
         }
     }
     const REDUCE: u8 = 10;
-    expand_distance_map_internal(&mut distance_map, &obstacle_indices, u8::MAX, |v| {
+    expand_distance_map_internal(&mut distance_map, &obstacle_indices, 50, |v| {
         if v < REDUCE {
             0
         } else {
