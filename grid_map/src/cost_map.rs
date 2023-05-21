@@ -6,7 +6,7 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     for ind in path {
         path_distance_map.set_value_by_indices(ind, 0).unwrap();
     }
-    expand_distance_map_internal(&mut path_distance_map, &path, 0, |v| {
+    expand_distance_map_internal(&mut path_distance_map, path, 0, |v| {
         if v == u8::MAX {
             u8::MAX
         } else {
@@ -15,7 +15,6 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
     });
     path_distance_map
 }
-
 
 /// Create goal distance map
 pub fn goal_distance_map(map: &GridMap<u8>, goal: &Indices) -> GridMap<u8> {
@@ -104,8 +103,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use crate::utils::show_ascii_map;
+    use crate::*;
     #[test]
     fn path_distance_map_test() {
         use rand::distributions::{Distribution, Uniform};

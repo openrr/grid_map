@@ -58,6 +58,7 @@ pub fn load_pgm<P: AsRef<Path>>(
 }
 
 /// Utility for debug
+#[cfg(test)]
 pub(crate) fn show_ascii_map(map: &GridMap<u8>, scale: f32) {
     for i in 0..map.height() {
         for j in 0..map.width() {
@@ -79,7 +80,6 @@ pub(crate) fn show_ascii_map(map: &GridMap<u8>, scale: f32) {
         println!("");
     }
 }
-
 
 #[cfg(test)]
 mod tests {

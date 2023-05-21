@@ -15,9 +15,7 @@ where
 {
     /// Initialize with all maps
     pub fn new(maps: HashMap<String, GridMap<T>>) -> Self {
-        Self {
-            maps
-        }
+        Self { maps }
     }
     /// Add a map as a layer
     pub fn add_layer(&mut self, name: String, map: GridMap<T>) {

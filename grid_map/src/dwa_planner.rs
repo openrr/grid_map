@@ -17,10 +17,7 @@ pub struct Acceleration {
 pub type Pose = na::Isometry2<f64>;
 
 fn velocity_to_pose(velocity: &Velocity, dt: f64) -> Pose {
-    Pose::new(
-        na::Vector2::new(velocity.x * dt, 0.0),
-        velocity.theta * dt,
-    )
+    Pose::new(na::Vector2::new(velocity.x * dt, 0.0), velocity.theta * dt)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -30,13 +27,17 @@ pub struct Plan {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct Limits {
+    pub max_velocity: Velocity,
+    pub max_accel: Acceleration,
+    pub min_velocity: Velocity,
+    pub min_accel: Acceleration,
+}
+
+#[derive(Debug, Clone, Default)]
 /// DWA Planner
 pub struct DwaPlanner {
-    max_velocity: Velocity,
-    max_accel: Acceleration,
-    min_velocity: Velocity,
-    min_accel: Acceleration,
-
+    limits: Limits,
     map_name_weight: HashMap<String, f64>,
     controller_dt: f64,
     simulation_duration: f64,
@@ -61,20 +62,14 @@ fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> 
 
 impl DwaPlanner {
     pub fn new(
-        max_velocity: Velocity,
-        max_accel: Acceleration,
-        min_velocity: Velocity,
-        min_accel: Acceleration,
+        limits: Limits,
         map_name_weight: HashMap<String, f64>,
         controller_dt: f64,
         simulation_duration: f64,
         num_vel_sample: i32,
     ) -> Self {
         Self {
-            max_velocity,
-            max_accel,
-            min_velocity,
-            min_accel,
+            limits,
             map_name_weight,
             controller_dt,
             simulation_duration,
@@ -83,14 +78,20 @@ impl DwaPlanner {
     }
 
     pub(crate) fn sample_velocity(&self, current_velocity: &Velocity) -> Vec<Velocity> {
-        let max_x_limit = (current_velocity.x + self.max_accel.x * self.controller_dt)
-            .clamp(self.min_velocity.x, self.max_velocity.x);
-        let min_x_limit = (current_velocity.x + self.min_accel.x * self.controller_dt)
-            .clamp(self.min_velocity.x, self.max_velocity.x);
-        let max_theta_limit = (current_velocity.theta + self.max_accel.theta * self.controller_dt)
-            .clamp(self.min_velocity.theta, self.max_velocity.theta);
-        let min_theta_limit = (current_velocity.theta + self.min_accel.theta * self.controller_dt)
-            .clamp(self.min_velocity.theta, self.max_velocity.theta);
+        let max_x_limit = (current_velocity.x + self.limits.max_accel.x * self.controller_dt)
+            .clamp(self.limits.min_velocity.x, self.limits.max_velocity.x);
+        let min_x_limit = (current_velocity.x + self.limits.min_accel.x * self.controller_dt)
+            .clamp(self.limits.min_velocity.x, self.limits.max_velocity.x);
+        let max_theta_limit =
+            (current_velocity.theta + self.limits.max_accel.theta * self.controller_dt).clamp(
+                self.limits.min_velocity.theta,
+                self.limits.max_velocity.theta,
+            );
+        let min_theta_limit =
+            (current_velocity.theta + self.limits.min_accel.theta * self.controller_dt).clamp(
+                self.limits.min_velocity.theta,
+                self.limits.max_velocity.theta,
+            );
         let vel_dx = (max_x_limit - min_x_limit) / self.num_vel_sample as f64;
         let vel_dtheta = (max_theta_limit - min_theta_limit) / self.num_vel_sample as f64;
         let mut velocities = vec![];
@@ -136,9 +137,9 @@ impl DwaPlanner {
         let mut min_cost = f64::MAX;
         let mut selected_plan = Plan::default();
         for plan in plans {
-            for (k, v) in &self.map_name_weight {
+            for (name, v) in &self.map_name_weight {
                 let cost = v * accumulate_values_by_positions(
-                    maps.layer(&k).unwrap(),
+                    maps.layer(name).unwrap(),
                     &plan
                         .path
                         .iter()
@@ -155,16 +156,15 @@ impl DwaPlanner {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use na::Vector2;
 
-    use crate::*;
     use crate::dwa_planner::*;
     use crate::utils::show_ascii_map;
+    use crate::*;
     #[test]
     fn path_distance_map_test() {
         use rand::distributions::{Distribution, Uniform};
@@ -236,13 +236,30 @@ mod tests {
         weights.insert("path".to_owned(), 0.1);
         weights.insert("goal".to_owned(), 0.1);
         weights.insert("obstacle".to_owned(), 0.03);
-        
-        let planner = DwaPlanner::new(Velocity { x: 0.1, theta: 0.3}, Acceleration { x: 0.2, theta: 0.6},
-            Velocity { x: 0.0, theta: -0.3}, Acceleration { x: -0.2, theta: -0.6},
-            weights, 0.1, 3.0, 5);
-        let plan = planner.plan_local_path(&Pose::new(Vector2::new(start[0], start[1]),
-         0.0), &Velocity { x: 0.0, theta: 0.0 }, &layered);
-         println!("vel = {:?}", plan.velocity);
 
+        let planner = DwaPlanner::new(
+            Limits {
+                max_velocity: Velocity { x: 0.1, theta: 0.3 },
+                max_accel: Acceleration { x: 0.2, theta: 0.6 },
+                min_velocity: Velocity {
+                    x: 0.0,
+                    theta: -0.3,
+                },
+                min_accel: Acceleration {
+                    x: -0.2,
+                    theta: -0.6,
+                },
+            },
+            weights,
+            0.1,
+            3.0,
+            5,
+        );
+        let plan = planner.plan_local_path(
+            &Pose::new(Vector2::new(start[0], start[1]), 0.0),
+            &Velocity { x: 0.0, theta: 0.0 },
+            &layered,
+        );
+        println!("vel = {:?}", plan.velocity);
     }
 }

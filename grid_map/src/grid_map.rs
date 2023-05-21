@@ -113,6 +113,10 @@ where
         &self.cells
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.cells.is_empty()
+    }
+
     pub fn len(&self) -> usize {
         self.cells.len()
     }

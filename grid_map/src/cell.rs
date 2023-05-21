@@ -1,14 +1,15 @@
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum Cell<T>
 where
     T: Clone,
 {
+    #[default]
     Uninitialized,
     Unknown,
     Obstacle,
     Value(T),
 }
-
+/*
 impl<T> Default for Cell<T>
 where
     T: Clone,
@@ -17,7 +18,7 @@ where
         Cell::Uninitialized
     }
 }
-
+ */
 impl<T> Cell<T>
 where
     T: Clone,
@@ -29,22 +30,13 @@ where
         }
     }
     pub fn has_value(&self) -> bool {
-        match self {
-            Self::Value(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Value(_))
     }
     pub fn is_uninitialized(&self) -> bool {
-        match self {
-            Self::Uninitialized => true,
-            _ => false,
-        }
+        matches!(self, Self::Uninitialized)
     }
     pub fn is_obstacle(&self) -> bool {
-        match self {
-            Self::Obstacle => true,
-            _ => false,
-        }
+        matches!(self, Self::Obstacle)
     }
 
     pub fn from_value(value: T) -> Self {
