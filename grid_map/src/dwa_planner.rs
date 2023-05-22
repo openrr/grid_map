@@ -236,14 +236,14 @@ mod tests {
             map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
         }
         show_ascii_map(&map, 1.0);
-        let path_distance_map = path_distance_map(&map, &path_grid);
+        let path_distance_map = path_distance_map(&map, &path_grid).unwrap();
         show_ascii_map(&path_distance_map, 1.0);
         println!("=======================");
         let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
-        let goal_distance_map = goal_distance_map(&map, &goal_grid);
+        let goal_distance_map = goal_distance_map(&map, &goal_grid).unwrap();
         show_ascii_map(&goal_distance_map, 0.1);
         println!("=======================");
-        let obstacle_distance_map = obstacle_distance_map(&map);
+        let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
         show_ascii_map(&obstacle_distance_map, 0.1);
         let mut maps = HashMap::new();
         const PATH_DISTANCE_MAP_NAME: &str = "path";

@@ -1,10 +1,10 @@
-use crate::{Cell, Grid, GridMap};
+use crate::{Cell, Grid, GridMap, Error, Result};
 
 /// Create path distance map
-pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> GridMap<u8> {
+pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> Result<GridMap<u8>> {
     let mut path_distance_map = map.copy_without_value();
     for ind in path {
-        path_distance_map.set_value(ind, 0).unwrap();
+        path_distance_map.set_value(ind, 0).ok_or_else(|| Error::OutOfRangeGrid(*ind))?;
     }
     expand_distance_map_internal(&mut path_distance_map, path, 0, |v| {
         if v == u8::MAX {
@@ -13,13 +13,13 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> GridMap<u8> {
             v + 1
         }
     });
-    path_distance_map
+    Ok(path_distance_map)
 }
 
 /// Create goal distance map
-pub fn goal_distance_map(map: &GridMap<u8>, goal: &Grid) -> GridMap<u8> {
+pub fn goal_distance_map(map: &GridMap<u8>, goal: &Grid) -> Result<GridMap<u8>> {
     let mut goal_distance_map = map.copy_without_value();
-    goal_distance_map.set_value(goal, 0).unwrap();
+    goal_distance_map.set_value(goal, 0).ok_or_else(|| Error::OutOfRangeGrid(*goal))?;
     expand_distance_map_internal(&mut goal_distance_map, &[goal.to_owned()], 0, |v| {
         if v == u8::MAX {
             u8::MAX
@@ -27,17 +27,17 @@ pub fn goal_distance_map(map: &GridMap<u8>, goal: &Grid) -> GridMap<u8> {
             v + 1
         }
     });
-    goal_distance_map
+    Ok(goal_distance_map)
 }
 
 /// Create obstacle distance map
-pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
+pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
     let mut distance_map = map.copy_without_value();
     let mut obstacle_grid = vec![];
     for y in 0..distance_map.height() {
         for x in 0..distance_map.width() {
             let grid = Grid { x, y };
-            if distance_map.cell(&grid).unwrap().is_obstacle() {
+            if distance_map.cell(&grid).ok_or_else(|| Error::OutOfRangeGrid(grid))?.is_obstacle() {
                 obstacle_grid.push(grid);
             }
         }
@@ -50,7 +50,7 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
             v - REDUCE
         }
     });
-    distance_map
+    Ok(distance_map)
 }
 
 pub fn expand_distance_map_internal<F>(
@@ -133,11 +133,11 @@ mod tests {
             map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
         }
 
-        show_ascii_map(&path_distance_map(&map, &path_grid), 1.0);
+        show_ascii_map(&path_distance_map(&map, &path_grid).unwrap(), 1.0);
         println!("=======================");
         let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
-        show_ascii_map(&goal_distance_map(&map, &goal_grid), 1.0);
+        show_ascii_map(&goal_distance_map(&map, &goal_grid).unwrap(), 1.0);
         println!("=======================");
-        show_ascii_map(&obstacle_distance_map(&map), 0.1);
+        show_ascii_map(&obstacle_distance_map(&map).unwrap(), 0.1);
     }
 }

@@ -22,7 +22,7 @@ impl Size {
 }
 
 #[derive(Clone, Debug)]
-pub struct GridPositionConverter {
+struct GridPositionConverter {
     resolution: f64,
     min_point: Position,
     max_point: Position,
@@ -76,15 +76,6 @@ impl GridPositionConverter {
             Some(index)
         }
     }
-
-    pub fn to_grid_from_index(&self, index: usize) -> Option<Grid> {
-        if index >= self.size.len() {
-            return None;
-        }
-        let rows = index / self.size.width;
-        let cols = index - rows * self.size.width;
-        Some(Grid { x: cols, y: rows })
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -100,6 +91,7 @@ impl<T> GridMap<T>
 where
     T: Clone,
 {
+    /// Create GridMap
     pub fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
         assert!(max_point > min_point);
         let grid_converter = GridPositionConverter::new(min_point, max_point, resolution);
@@ -110,6 +102,7 @@ where
         }
     }
 
+    /// Convert the grid into the index of the cells
     fn to_index(&self, grid: &Grid) -> Option<usize> {
         self.grid_converter.to_index(grid)
     }
@@ -121,31 +114,37 @@ where
         self.grid_converter.to_grid(&Position::new(x, y))
     }
 
-    // Get cell by grid
+    /// Get cell by grid if it is inside of the map
     pub fn cell(&self, grid: &Grid) -> Option<&Cell<T>> {
         self.to_index(grid).map(|index| &self.cells[index])
     }
 
+    /// Access to the all cells
     pub fn cells(&self) -> &Vec<Cell<T>> {
         &self.cells
     }
 
+    /// Return if it is empty
     pub fn is_empty(&self) -> bool {
         self.cells.is_empty()
     }
 
+    /// Get the number of the cells
     pub fn len(&self) -> usize {
         self.cells.len()
     }
 
+    /// Get mutable all cells
     pub fn cells_mut(&mut self) -> &mut Vec<Cell<T>> {
         &mut self.cells
     }
 
+    /// Get x length of the map
     pub fn width(&self) -> usize {
         self.grid_converter.size().width
     }
 
+    /// Get y length of the map
     pub fn height(&self) -> usize {
         self.grid_converter.size().height
     }
@@ -160,6 +159,12 @@ where
         self.grid_converter.max_point()
     }
 
+    /// Get the unit length of the grid
+    pub fn resolution(&self) -> f64 {
+        self.grid_converter.resolution()
+    }
+
+    /// Get mutable cell
     pub fn cell_mut(&mut self, grid: &Grid) -> Option<&mut Cell<T>> {
         match self.to_index(grid) {
             Some(index) => Some(&mut self.cells[index]),
@@ -167,11 +172,15 @@ where
         }
     }
 
+    /// Set the value of the grid
+    ///
+    /// If it is not Value cell, it will become a Value cell.
     pub fn set_value(&mut self, grid: &Grid, value: T) -> Option<()> {
         *self.cell_mut(grid)? = Cell::Value(value);
         Some(())
     }
 
+    /// Get the value of the grid
     pub fn value(&self, grid: &Grid) -> Option<T> {
         match self.cell(grid) {
             Some(Cell::Value(v)) => Some(v.to_owned()),
@@ -179,11 +188,13 @@ where
         }
     }
 
+    /// Set the grid as Obstacle
     pub fn set_obstacle(&mut self, grid: &Grid) -> Option<()> {
         *self.cell_mut(grid)? = Cell::Obstacle;
         Some(())
     }
 
+    /// Copy the map, but un-initialize the Value cells with Uninitialized.
     pub fn copy_without_value(&self) -> Self {
         let cells: Vec<_> = self
             .cells
