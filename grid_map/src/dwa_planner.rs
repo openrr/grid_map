@@ -23,15 +23,20 @@ fn velocity_to_pose(velocity: &Velocity, dt: f64) -> Pose {
 #[derive(Debug, Clone, Default)]
 pub struct Plan {
     pub velocity: Velocity,
-    pub(crate) cost: f64,
+    pub cost: f64,
     pub path: Vec<Pose>,
 }
 
 #[derive(Debug, Clone, Default)]
+/// Velocity and acceleration limitations of the robot
 pub struct Limits {
+    /// plus limit of the velocity
     pub max_velocity: Velocity,
+    /// plus limit of the acceleration
     pub max_accel: Acceleration,
+    /// minus limit of the velocity (like -0.5)
     pub min_velocity: Velocity,
+    /// minus limit of the acceleration (like -1.0)
     pub min_accel: Acceleration,
 }
 
@@ -58,14 +63,16 @@ fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> 
                     Cell::Value(v) => {
                         cost += *v as f64;
                     }
-                    Cell::Uninitialized => panic!("uninit!"),
+                    Cell::Uninitialized => panic!("Uninitialized is not supported!"),
                     Cell::Obstacle => cost += 255.0,
                     Cell::Unknown => cost += 255.0,
                 }
             } else {
+                // out of grid (should not happen)
                 return f64::MAX;
             }
         } else {
+            // out of grid
             return f64::MAX;
         }
     }
@@ -135,6 +142,7 @@ impl DwaPlanner {
         poses
     }
 
+    /// Plan the path using forward simulation
     pub fn plan_local_path(
         &self,
         current_pose: &Pose,
@@ -281,7 +289,8 @@ mod tests {
         let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
         let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
         let mut plan_map = map.clone();
-        for _ in 0..100 {
+        let mut reached = false;
+        for i in 0..100 {
             let plan = planner.plan_local_path(&current_pose, &current_velocity, &layered);
             println!("vel = {:?} cost = {}", current_velocity, plan.cost);
             println!(
@@ -303,11 +312,13 @@ mod tests {
             if (goal_pose.translation.vector - current_pose.translation.vector).norm()
                 < GOAL_THRESHOLD
             {
-                println!("GOAL!");
+                println!("GOAL! count = {i}");
+                reached = true;
                 break;
             }
             show_ascii_map(&plan_map, 1.0);
         }
+        assert!(reached);
     }
 
     #[test]
