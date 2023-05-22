@@ -1,4 +1,5 @@
-use crate::{Cell, GridMap, LayeredGridMap, Position};
+use grid_map::{Cell, GridMap, LayeredGridMap, Position};
+pub use na::Vector2;
 use nalgebra as na;
 use std::collections::HashMap;
 
@@ -185,9 +186,9 @@ impl DwaPlanner {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
+    use grid_map::*;
     use na::Vector2;
+    use std::collections::HashMap;
 
     use crate::dwa_planner::*;
     use crate::utils::show_ascii_map;

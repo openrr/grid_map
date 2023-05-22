@@ -1,3 +1,6 @@
 [workspace]
 resolver = "2"
 members = ["grid_map", "grid_map_viewer", "openrr-nav"]
+
+[patch.crates-io]
+grid_map = { path = "grid_map" }

@@ -1,10 +1,12 @@
-use crate::{Cell, Grid, GridMap, Error, Result};
+use grid_map::{Cell, Error, Grid, GridMap, Result};
 
 /// Create path distance map
 pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> Result<GridMap<u8>> {
     let mut path_distance_map = map.copy_without_value();
     for ind in path {
-        path_distance_map.set_value(ind, 0).ok_or_else(|| Error::OutOfRangeGrid(*ind))?;
+        path_distance_map
+            .set_value(ind, 0)
+            .ok_or_else(|| Error::OutOfRangeGrid(*ind))?;
     }
     expand_distance_map_internal(&mut path_distance_map, path, 0, |v| {
         if v == u8::MAX {
@@ -19,7 +21,9 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> Result<GridMap<u8>
 /// Create goal distance map
 pub fn goal_distance_map(map: &GridMap<u8>, goal: &Grid) -> Result<GridMap<u8>> {
     let mut goal_distance_map = map.copy_without_value();
-    goal_distance_map.set_value(goal, 0).ok_or_else(|| Error::OutOfRangeGrid(*goal))?;
+    goal_distance_map
+        .set_value(goal, 0)
+        .ok_or_else(|| Error::OutOfRangeGrid(*goal))?;
     expand_distance_map_internal(&mut goal_distance_map, &[goal.to_owned()], 0, |v| {
         if v == u8::MAX {
             u8::MAX
@@ -37,7 +41,11 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
     for y in 0..distance_map.height() {
         for x in 0..distance_map.width() {
             let grid = Grid { x, y };
-            if distance_map.cell(&grid).ok_or_else(|| Error::OutOfRangeGrid(grid))?.is_obstacle() {
+            if distance_map
+                .cell(&grid)
+                .ok_or_else(|| Error::OutOfRangeGrid(grid))?
+                .is_obstacle()
+            {
                 obstacle_grid.push(grid);
             }
         }
@@ -89,6 +97,7 @@ where
 mod tests {
     use crate::utils::show_ascii_map;
     use crate::*;
+    use grid_map::*;
     #[test]
     fn path_distance_map_test() {
         use rand::distributions::{Distribution, Uniform};

@@ -9,7 +9,6 @@ edition = "2021"
 image = "0.24"
 thiserror = "1"
 yaml-rust = "0.4"
-nalgebra = "0.32"
 
 [dev-dependencies]
 rand = "0.8"

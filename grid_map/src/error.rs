@@ -1,5 +1,5 @@
-use thiserror::Error;
 use crate::Grid;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
