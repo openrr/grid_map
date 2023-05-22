@@ -1,10 +1,10 @@
-use crate::{Cell, GridMap, Indices};
+use crate::{Cell, Grid, GridMap};
 
 /// Create path distance map
-pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
+pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> GridMap<u8> {
     let mut path_distance_map = map.copy_without_value();
     for ind in path {
-        path_distance_map.set_value_by_indices(ind, 0).unwrap();
+        path_distance_map.set_value(ind, 0).unwrap();
     }
     expand_distance_map_internal(&mut path_distance_map, path, 0, |v| {
         if v == u8::MAX {
@@ -17,9 +17,9 @@ pub fn path_distance_map(map: &GridMap<u8>, path: &[Indices]) -> GridMap<u8> {
 }
 
 /// Create goal distance map
-pub fn goal_distance_map(map: &GridMap<u8>, goal: &Indices) -> GridMap<u8> {
+pub fn goal_distance_map(map: &GridMap<u8>, goal: &Grid) -> GridMap<u8> {
     let mut goal_distance_map = map.copy_without_value();
-    goal_distance_map.set_value_by_indices(goal, 0).unwrap();
+    goal_distance_map.set_value(goal, 0).unwrap();
     expand_distance_map_internal(&mut goal_distance_map, &[goal.to_owned()], 0, |v| {
         if v == u8::MAX {
             u8::MAX
@@ -33,21 +33,17 @@ pub fn goal_distance_map(map: &GridMap<u8>, goal: &Indices) -> GridMap<u8> {
 /// Create obstacle distance map
 pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
     let mut distance_map = map.copy_without_value();
-    let mut obstacle_indices = vec![];
+    let mut obstacle_grid = vec![];
     for y in 0..distance_map.height() {
         for x in 0..distance_map.width() {
-            let indices = Indices { x, y };
-            if distance_map
-                .cell_by_indices(&indices)
-                .unwrap()
-                .is_obstacle()
-            {
-                obstacle_indices.push(indices);
+            let grid = Grid { x, y };
+            if distance_map.cell(&grid).unwrap().is_obstacle() {
+                obstacle_grid.push(grid);
             }
         }
     }
     const REDUCE: u8 = 10;
-    expand_distance_map_internal(&mut distance_map, &obstacle_indices, 50, |v| {
+    expand_distance_map_internal(&mut distance_map, &obstacle_grid, 50, |v| {
         if v < REDUCE {
             0
         } else {
@@ -59,7 +55,7 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> GridMap<u8> {
 
 pub fn expand_distance_map_internal<F>(
     map: &mut GridMap<u8>,
-    previous_indices: &[Indices],
+    previous_grids: &[Grid],
     previous_value: u8,
     increment_func: F,
 ) -> bool
@@ -70,35 +66,23 @@ where
         return true;
     }
     let current_value = increment_func(previous_value);
-    let mut current_indices = vec![];
-    for ind in previous_indices {
+    let mut current_grid = vec![];
+    for ind in previous_grids {
         // search +/-
-        let opt_index = map.to_index_by_indices(ind);
-        if opt_index.is_none() {
+        if map.cell(ind).is_none() {
             continue;
         }
         for neighbor in ind.neighbors4() {
-            if let Some(index) = map.to_index_by_indices(&neighbor) {
-                if !map.cells()[index].is_uninitialized() {
-                    //if updated[index] {
+            if let Some(cell) = map.cell_mut(&neighbor) {
+                if !cell.is_uninitialized() {
                     continue;
                 }
-                let opt_cell = map.cell_by_indices_mut(&neighbor);
-                if opt_cell.is_none() {
-                    continue;
-                }
-                let cell = opt_cell.unwrap();
-                //if cell.has_value() || cell.is_uninitialized() {
-                if cell.is_uninitialized() {
-                    *cell = Cell::Value(current_value);
-                }
-                //updated[index] = true;
-                current_indices.push(neighbor);
+                *cell = Cell::Value(current_value);
+                current_grid.push(neighbor);
             }
         }
     }
-    //expand_distance_map_internal(map, &current_indices, current_value, increment_func, updated)
-    expand_distance_map_internal(map, &current_indices, current_value, increment_func)
+    expand_distance_map_internal(map, &current_grid, current_value, increment_func)
 }
 
 #[cfg(test)]
@@ -115,11 +99,15 @@ mod tests {
             0.1,
         );
         for i in 0..20 {
-            map.set_obstacle_by_position(&Position::new(0.2 + 0.1 * i as f64, -0.5))
-                .unwrap();
+            map.set_obstacle(
+                &map.to_grid(&Position::new(0.2 + 0.1 * i as f64, -0.5))
+                    .unwrap(),
+            );
             for j in 0..10 {
-                map.set_obstacle_by_position(&Position::new(0.1 * i as f64, -0.2 + 0.1 * j as f64))
-                    .unwrap();
+                map.set_obstacle(
+                    &map.to_grid(&Position::new(0.1 * i as f64, -0.2 + 0.1 * j as f64))
+                        .unwrap(),
+                );
             }
         }
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
@@ -130,7 +118,8 @@ mod tests {
             &goal,
             |p: &[f64]| {
                 !matches!(
-                    map.cell_by_position(&Position::new(p[0], p[1])).unwrap(),
+                    map.cell(&map.to_grid(&Position::new(p[0], p[1])).unwrap())
+                        .unwrap(),
                     Cell::Obstacle
                 )
             },
@@ -143,26 +132,20 @@ mod tests {
         )
         .unwrap();
 
-        let path_indices = result
+        let path_grid = result
             .iter()
-            .map(|p| {
-                map.to_index_by_position(&Position::new(p[0], p[1]))
-                    .unwrap()
-            })
-            .map(|index| map.to_indices_from_index(index).unwrap())
+            .map(|p| map.to_grid(&Position::new(p[0], p[1])).unwrap())
             .collect::<Vec<_>>();
         for p in result {
-            map.set_value_by_position(&Position::new(p[0], p[1]), 0)
+            map.set_value(&map.to_grid(&Position::new(p[0], p[1])).unwrap(), 0)
                 .unwrap();
         }
 
-        show_ascii_map(&path_distance_map(&map, &path_indices), 1.0);
+        show_ascii_map(&path_distance_map(&map, &path_grid), 1.0);
         println!("=======================");
-        let goal_indices = map
-            .position_to_indices(&Position::new(goal[0], goal[1]))
-            .unwrap();
-        show_ascii_map(&goal_distance_map(&map, &goal_indices), 1.0);
+        let goal_grid = map.to_grid(&Position::new(goal[0], goal[1])).unwrap();
+        show_ascii_map(&goal_distance_map(&map, &goal_grid), 1.0);
         println!("=======================");
-        show_ascii_map(&obstacle_distance_map(&map), 0.03);
+        show_ascii_map(&obstacle_distance_map(&map), 0.1);
     }
 }

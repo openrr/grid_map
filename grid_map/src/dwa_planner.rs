@@ -46,12 +46,24 @@ pub struct DwaPlanner {
 }
 
 fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> f64 {
+    if positions.is_empty() {
+        return f64::MAX;
+    }
     let mut cost: f64 = 0.0;
     for p in positions {
-        if let Some(opt) = map.cell_by_position(p) {
-            match opt {
-                Cell::Value(v) => cost += v as f64,
-                _ => { return f64::MAX }
+        // TODO: Support allow Unknown
+        if let Some(grid) = map.to_grid(p) {
+            if let Some(cell) = map.cell(&grid) {
+                match cell {
+                    Cell::Value(v) => {
+                        cost += *v as f64;
+                    }
+                    Cell::Uninitialized => panic!("uninit!"),
+                    Cell::Obstacle => cost += 255.0,
+                    Cell::Unknown => cost += 255.0,
+                }
+            } else {
+                return f64::MAX;
             }
         } else {
             return f64::MAX;
@@ -110,6 +122,7 @@ impl DwaPlanner {
         }
         velocities
     }
+
     fn forward_simulation(&self, current_pose: &Pose, target_velocity: &Velocity) -> Vec<Pose> {
         let mut last_pose = current_pose.to_owned();
         let diff = velocity_to_pose(target_velocity, self.controller_dt);
@@ -121,6 +134,7 @@ impl DwaPlanner {
         }
         poses
     }
+
     pub fn plan_local_path(
         &self,
         current_pose: &Pose,
@@ -170,22 +184,27 @@ mod tests {
     use crate::dwa_planner::*;
     use crate::utils::show_ascii_map;
     use crate::*;
-    #[test]
-    fn dwa_planner_test() {
-        use rand::distributions::{Distribution, Uniform};
-        use rrt;
+
+    fn new_sample_map() -> GridMap<u8> {
         let mut map = grid_map::GridMap::<u8>::new(
             Position::new(-1.05, -1.05),
             Position::new(3.05, 1.05),
             0.05,
         );
-        for i in 0..50 {
-            map.set_obstacle_by_indices(&Indices::new(i + 10, 5)).unwrap();
-            map.set_obstacle_by_indices(&Indices::new(i + 10, 6)).unwrap();
+        for i in 10..50 {
+            map.set_obstacle(&Grid::new(i + 10, 5)).unwrap();
+            map.set_obstacle(&Grid::new(i + 10, 6)).unwrap();
             for j in 20..30 {
-                map.set_obstacle_by_indices(&Indices::new(i, j)).unwrap();
+                map.set_obstacle(&Grid::new(i, j)).unwrap();
             }
         }
+        map
+    }
+    #[test]
+    fn dwa_planner_test() {
+        use rand::distributions::{Distribution, Uniform};
+        use rrt;
+        let mut map = new_sample_map();
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
         let y_range = Uniform::new(map.min_point().y, map.max_point().y);
         let start = [-0.8, -0.9];
@@ -195,7 +214,8 @@ mod tests {
             &goal,
             |p: &[f64]| {
                 !matches!(
-                    map.cell_by_position(&Position::new(p[0], p[1])).unwrap(),
+                    map.cell(&map.to_grid(&Position::new(p[0], p[1])).unwrap())
+                        .unwrap(),
                     Cell::Obstacle
                 )
             },
@@ -208,38 +228,37 @@ mod tests {
         )
         .unwrap();
 
-        let path_indices = result
+        let path_grid = result
             .iter()
-            .map(|p| {
-                map.to_index_by_position(&Position::new(p[0], p[1]))
-                    .unwrap()
-            })
-            .map(|index| map.to_indices_from_index(index).unwrap())
+            .map(|p| map.to_grid(&Position::new(p[0], p[1])).unwrap())
             .collect::<Vec<_>>();
+
         for p in result {
-            map.set_value_by_position(&Position::new(p[0], p[1]), 0)
+            map.set_value(&map.to_grid(&Position::new(p[0], p[1])).unwrap(), 0)
                 .unwrap();
         }
-        let path_distance_map = path_distance_map(&map, &path_indices);
+        show_ascii_map(&map, 1.0);
+        let path_distance_map = path_distance_map(&map, &path_grid);
         show_ascii_map(&path_distance_map, 1.0);
         println!("=======================");
-        let goal_indices = map
-            .position_to_indices(&Position::new(goal[0], goal[1]))
-            .unwrap();
-        let goal_distance_map = goal_distance_map(&map, &goal_indices);
-        show_ascii_map(&goal_distance_map, 1.0);
+        let goal_grid = map.to_grid(&Position::new(goal[0], goal[1])).unwrap();
+        let goal_distance_map = goal_distance_map(&map, &goal_grid);
+        show_ascii_map(&goal_distance_map, 0.1);
         println!("=======================");
         let obstacle_distance_map = obstacle_distance_map(&map);
-        show_ascii_map(&obstacle_distance_map, 0.03);
+        show_ascii_map(&obstacle_distance_map, 0.1);
         let mut maps = HashMap::new();
-        maps.insert("path".to_owned(), path_distance_map);
-        maps.insert("goal".to_owned(), goal_distance_map);
-        maps.insert("obstacle".to_owned(), obstacle_distance_map);
+        const PATH_DISTANCE_MAP_NAME: &str = "path";
+        const GOAL_DISTANCE_MAP_NAME: &str = "goal";
+        const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+        maps.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
+        maps.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
+        maps.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
         let layered = LayeredGridMap::new(maps);
         let mut weights = HashMap::new();
-        weights.insert("path".to_owned(), 0.9);
-        weights.insert("goal".to_owned(), 0.8);
-        weights.insert("obstacle".to_owned(), 0.01);
+        weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
+        weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
+        weights.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), 0.3);
 
         let planner = DwaPlanner::new(
             Limits {
@@ -274,12 +293,19 @@ mod tests {
             );
             current_velocity = plan.velocity;
             current_pose = plan.path[0];
-            let _  = plan_map
-                .set_value_by_position(
-                    &Position::new(current_pose.translation.x, current_pose.translation.y),
-                    9,
-                );
-            if (goal_pose.translation.vector - current_pose.translation.vector).norm() < 0.1 {
+            if let Some(grid) = plan_map.to_grid(&Position::new(
+                current_pose.translation.x,
+                current_pose.translation.y,
+            )) {
+                let _ = plan_map.set_value(&grid, 9);
+            } else {
+                println!("OUT OF MAP!");
+                return;
+            }
+            const GOAL_THRESHOLD: f64 = 0.1;
+            if (goal_pose.translation.vector - current_pose.translation.vector).norm()
+                < GOAL_THRESHOLD
+            {
                 println!("GOAL!");
                 break;
             }
@@ -292,13 +318,13 @@ mod tests {
         let planner = DwaPlanner::new(
             Limits {
                 max_velocity: Velocity { x: 0.1, theta: 0.5 },
-                max_accel: Acceleration { x: 0.2, theta: 1.0 },
+                max_accel: Acceleration { x: 0.5, theta: 1.0 },
                 min_velocity: Velocity {
                     x: 0.0,
                     theta: -0.5,
                 },
                 min_accel: Acceleration {
-                    x: -0.2,
+                    x: -0.5,
                     theta: -1.0,
                 },
             },

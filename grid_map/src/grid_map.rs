@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::indices::Indices;
+use crate::grid::Grid;
 use crate::position::Position;
 
 /// Size of the map
@@ -22,15 +22,78 @@ impl Size {
 }
 
 #[derive(Clone, Debug)]
+pub struct GridPositionConverter {
+    resolution: f64,
+    min_point: Position,
+    max_point: Position,
+    size: Size,
+}
+
+impl GridPositionConverter {
+    /// Create grid position converter
+    pub fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
+        let width = ((max_point.x - min_point.x) / resolution) as usize;
+        let height = ((max_point.y - min_point.y) / resolution) as usize;
+        let size = Size::new(width, height);
+        Self {
+            resolution,
+            min_point,
+            max_point,
+            size,
+        }
+    }
+    pub fn resolution(&self) -> f64 {
+        self.resolution
+    }
+    pub fn min_point(&self) -> &Position {
+        &self.min_point
+    }
+    pub fn max_point(&self) -> &Position {
+        &self.max_point
+    }
+    pub fn size(&self) -> &Size {
+        &self.size
+    }
+    pub fn to_grid(&self, position: &Position) -> Option<Grid> {
+        if position.x < self.min_point.x || position.y < self.min_point.y {
+            return None;
+        }
+        let x = ((position.x - self.min_point.x) / self.resolution) as usize;
+        let y = ((position.y - self.min_point.y) / self.resolution) as usize;
+        if x >= self.size.width || y >= self.size.height {
+            return None;
+        }
+        Some(Grid { x, y })
+    }
+    pub fn to_index(&self, grid: &Grid) -> Option<usize> {
+        if grid.x >= self.size.width || grid.y >= self.size.height {
+            return None;
+        }
+        let index = self.size.width * grid.y + grid.x;
+        if self.size.len() <= index {
+            None
+        } else {
+            Some(index)
+        }
+    }
+
+    pub fn to_grid_from_index(&self, index: usize) -> Option<Grid> {
+        if index >= self.size.len() {
+            return None;
+        }
+        let rows = index / self.size.width;
+        let cols = index - rows * self.size.width;
+        Some(Grid { x: cols, y: rows })
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct GridMap<T>
 where
     T: Clone,
 {
-    resolution: f64,
-    min_point: Position,
-    max_point: Position,
+    grid_converter: GridPositionConverter,
     cells: Vec<Cell<T>>,
-    size: Size,
 }
 
 impl<T> GridMap<T>
@@ -39,74 +102,28 @@ where
 {
     pub fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
         assert!(max_point > min_point);
-        let width = ((max_point.x - min_point.x) / resolution) as usize;
-        let height = ((max_point.y - min_point.y) / resolution) as usize;
-        let size = Size::new(width, height);
-        let cells = vec![Cell::Uninitialized; size.len()];
+        let grid_converter = GridPositionConverter::new(min_point, max_point, resolution);
+        let cells = vec![Cell::Uninitialized; grid_converter.size().len()];
         GridMap {
-            resolution,
-            min_point,
-            max_point,
+            grid_converter,
             cells,
-            size,
         }
     }
 
-    pub fn to_index_by_position(&self, position: &Position) -> Option<usize> {
-        if position.x < self.min_point.x || position.y < self.min_point.y {
-            return None;
-        }
-        let index = self.size.width * ((position.y - self.min_point.y) / self.resolution) as usize
-            + ((position.x - self.min_point.x) / self.resolution) as usize;
-        if self.cells.len() <= index {
-            None
-        } else {
-            Some(index)
-        }
+    fn to_index(&self, grid: &Grid) -> Option<usize> {
+        self.grid_converter.to_index(grid)
     }
 
-    pub fn to_index_by_indices(&self, indices: &Indices) -> Option<usize> {
-        if indices.x >= self.width() || indices.y >= self.height() {
-            return None;
-        }
-        Some(self.size.width * indices.y + indices.x)
+    /// Convert position into grid
+    pub fn to_grid(&self, position: &Position) -> Option<Grid> {
+        //let index = self.to_index_by_position(position)?;
+        //self.to_grid_from_index(index)
+        self.grid_converter.to_grid(position)
     }
 
-    /// convert Indices into index
-    ///
-    /// ```
-    /// use grid_map::*;
-    /// let map = GridMap::<u8>::new(Position::new(0.0, 0.0), Position::new(1.0, 1.0), 0.1);
-    /// let ind = map.to_index_by_indices(&Indices { x : 5, y: 2}).unwrap();
-    /// let xy = map.to_indices_from_index(ind).unwrap();
-    /// assert_eq!(xy.x, 5);
-    /// assert_eq!(xy.y, 2);
-    /// ```
-    pub fn to_indices_from_index(&self, index: usize) -> Option<Indices> {
-        if index >= self.len() {
-            return None;
-        }
-        let rows = index / self.size.width;
-        let cols = index - rows * self.size.width;
-        Some(Indices { x: cols, y: rows })
-    }
-
-    /// Convert position into indices
-    pub fn position_to_indices(&self, position: &Position) -> Option<Indices> {
-        let index = self.to_index_by_position(position)?;
-        self.to_indices_from_index(index)
-    }
-
-    // Get cell by raw position
-    pub fn cell_by_position(&self, position: &Position) -> Option<Cell<T>> {
-        self.to_index_by_position(position)
-            .map(|index| self.cells[index].clone())
-    }
-
-    // Get cell by indices
-    pub fn cell_by_indices(&self, indices: &Indices) -> Option<Cell<T>> {
-        self.to_index_by_indices(indices)
-            .map(|index| self.cells[index].clone())
+    // Get cell by grid
+    pub fn cell(&self, grid: &Grid) -> Option<&Cell<T>> {
+        self.to_index(grid).map(|index| &self.cells[index])
     }
 
     pub fn cells(&self) -> &Vec<Cell<T>> {
@@ -126,63 +143,45 @@ where
     }
 
     pub fn width(&self) -> usize {
-        self.size.width
+        self.grid_converter.size().width
     }
 
     pub fn height(&self) -> usize {
-        self.size.height
+        self.grid_converter.size().height
     }
 
     /// Return the minimum point in raw Position value
-    pub fn min_point(&self) -> Position {
-        self.min_point
+    pub fn min_point(&self) -> &Position {
+        self.grid_converter.min_point()
     }
 
     /// Return the maximum point in raw Position value
-    pub fn max_point(&self) -> Position {
-        self.max_point
+    pub fn max_point(&self) -> &Position {
+        self.grid_converter.max_point()
     }
 
-    pub fn cell_by_position_mut(&mut self, position: &Position) -> Option<&mut Cell<T>> {
-        match self.to_index_by_position(position) {
+    pub fn cell_mut(&mut self, grid: &Grid) -> Option<&mut Cell<T>> {
+        match self.to_index(grid) {
             Some(index) => Some(&mut self.cells[index]),
             None => None,
         }
     }
 
-    pub fn cell_by_indices_mut(&mut self, indices: &Indices) -> Option<&mut Cell<T>> {
-        match self.to_index_by_indices(indices) {
-            Some(index) => Some(&mut self.cells[index]),
-            None => None,
+    pub fn set_value(&mut self, grid: &Grid, value: T) -> Option<()> {
+        *self.cell_mut(grid)? = Cell::Value(value);
+        Some(())
+    }
+
+    pub fn value(&self, grid: &Grid) -> Option<T> {
+        match self.cell(grid) {
+            Some(Cell::Value(v)) => Some(v.to_owned()),
+            _ => None,
         }
     }
 
-    pub fn set_value_by_position(&mut self, position: &Position, value: T) -> Option<()> {
-        *self.cell_by_position_mut(position)? = Cell::Value(value);
+    pub fn set_obstacle(&mut self, grid: &Grid) -> Option<()> {
+        *self.cell_mut(grid)? = Cell::Obstacle;
         Some(())
-    }
-
-    pub fn set_value_by_indices(&mut self, indices: &Indices, value: T) -> Option<()> {
-        *self.cell_by_indices_mut(indices)? = Cell::Value(value);
-        Some(())
-    }
-
-    pub fn set_obstacle_by_position(&mut self, position: &Position) -> Option<()> {
-        *self.cell_by_position_mut(position)? = Cell::Obstacle;
-        Some(())
-    }
-
-    pub fn set_obstacle_by_indices(&mut self, indices: &Indices) -> Option<()> {
-        *self.cell_by_indices_mut(indices)? = Cell::Obstacle;
-        Some(())
-    }
-
-    pub fn value_by_position(&mut self, position: &Position) -> Option<T> {
-        if let Cell::Value(value) = self.cell_by_position(position)? {
-            Some(value)
-        } else {
-            None
-        }
     }
 
     pub fn copy_without_value(&self) -> Self {
@@ -199,11 +198,8 @@ where
             .collect();
 
         Self {
-            resolution: self.resolution,
-            min_point: self.min_point,
-            max_point: self.max_point,
+            grid_converter: self.grid_converter.clone(),
             cells,
-            size: self.size,
         }
     }
 }
@@ -214,30 +210,38 @@ mod tests {
 
     #[test]
     fn test_to_index() {
-        let l = GridMap::<u8>::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
-        assert_eq!(l.to_index_by_position(&Position::new(0.3, 0.4)).unwrap(), 9);
+        let map = GridMap::<u8>::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(
-            l.to_index_by_position(&Position::new(0.35, 0.4)).unwrap(),
+            map.to_index(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
+                .unwrap(),
+            9
+        );
+        assert_eq!(
+            map.to_index(&map.to_grid(&Position::new(0.35, 0.4)).unwrap())
+                .unwrap(),
             10
         );
         assert_eq!(
-            l.to_index_by_position(&Position::new(0.4, 0.4)).unwrap(),
+            map.to_index(&map.to_grid(&Position::new(0.4, 0.4)).unwrap())
+                .unwrap(),
             11
         );
-        assert!(l.to_index_by_position(&Position::new(0.0, 0.4)).is_none());
+        assert!(&map.to_grid(&Position::new(0.0, 0.4)).is_none());
     }
 
     #[test]
     fn test_value() {
-        let mut l = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
+        let mut map = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(
-            l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(),
+            *map.cell(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
+                .unwrap(),
             Cell::Uninitialized
         );
-        l.set_value_by_position(&Position::new(0.3, 0.4), 1.0)
+        map.set_value(&map.to_grid(&Position::new(0.3, 0.4)).unwrap(), 1.0)
             .unwrap();
         assert_eq!(
-            l.cell_by_position(&Position::new(0.3, 0.4)).unwrap(),
+            *map.cell(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
+                .unwrap(),
             Cell::Value(1.0)
         );
     }
