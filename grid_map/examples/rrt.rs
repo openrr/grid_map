@@ -6,16 +6,11 @@ fn main() {
     let mut map =
         grid_map::GridMap::<u8>::new(Position::new(-1.05, -1.05), Position::new(3.05, 1.05), 0.1);
     for i in 0..20 {
-        map.set_value(
-            &map.to_grid(&Position::new(0.2 + 0.1 * i as f64, -0.5))
-                .unwrap(),
-            1,
-        )
-        .unwrap();
+        map.set_value(&map.to_grid(0.2 + 0.1 * i as f64, -0.5).unwrap(), 1)
+            .unwrap();
         for j in 0..10 {
             map.set_value(
-                &map.to_grid(&Position::new(0.1 * i as f64, -0.2 + 0.1 * j as f64))
-                    .unwrap(),
+                &map.to_grid(0.1 * i as f64, -0.2 + 0.1 * j as f64).unwrap(),
                 1,
             )
             .unwrap();
@@ -26,10 +21,7 @@ fn main() {
     let result = rrt::dual_rrt_connect(
         &[0.5, -0.8],
         &[2.5, 0.5],
-        |p: &[f64]| {
-            map.value(&map.to_grid(&Position::new(p[0], p[1])).unwrap())
-                .is_none()
-        },
+        |p: &[f64]| map.value(&map.to_grid(p[0], p[1]).unwrap()).is_none(),
         || {
             let mut rng = rand::thread_rng();
             vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
@@ -40,8 +32,7 @@ fn main() {
     .unwrap();
 
     for p in result {
-        map.set_value(&map.to_grid(&Position::new(p[0], p[1])).unwrap(), 0)
-            .unwrap();
+        map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
     }
     for i in 0..map.height() {
         for j in 0..map.width() {

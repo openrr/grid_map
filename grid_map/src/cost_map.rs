@@ -99,15 +99,9 @@ mod tests {
             0.1,
         );
         for i in 0..20 {
-            map.set_obstacle(
-                &map.to_grid(&Position::new(0.2 + 0.1 * i as f64, -0.5))
-                    .unwrap(),
-            );
+            map.set_obstacle(&map.to_grid(0.2 + 0.1 * i as f64, -0.5).unwrap());
             for j in 0..10 {
-                map.set_obstacle(
-                    &map.to_grid(&Position::new(0.1 * i as f64, -0.2 + 0.1 * j as f64))
-                        .unwrap(),
-                );
+                map.set_obstacle(&map.to_grid(0.1 * i as f64, -0.2 + 0.1 * j as f64).unwrap());
             }
         }
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
@@ -118,8 +112,7 @@ mod tests {
             &goal,
             |p: &[f64]| {
                 !matches!(
-                    map.cell(&map.to_grid(&Position::new(p[0], p[1])).unwrap())
-                        .unwrap(),
+                    map.cell(&map.to_grid(p[0], p[1]).unwrap()).unwrap(),
                     Cell::Obstacle
                 )
             },
@@ -134,16 +127,15 @@ mod tests {
 
         let path_grid = result
             .iter()
-            .map(|p| map.to_grid(&Position::new(p[0], p[1])).unwrap())
+            .map(|p| map.to_grid(p[0], p[1]).unwrap())
             .collect::<Vec<_>>();
         for p in result {
-            map.set_value(&map.to_grid(&Position::new(p[0], p[1])).unwrap(), 0)
-                .unwrap();
+            map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
         }
 
         show_ascii_map(&path_distance_map(&map, &path_grid), 1.0);
         println!("=======================");
-        let goal_grid = map.to_grid(&Position::new(goal[0], goal[1])).unwrap();
+        let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
         show_ascii_map(&goal_distance_map(&map, &goal_grid), 1.0);
         println!("=======================");
         show_ascii_map(&obstacle_distance_map(&map), 0.1);

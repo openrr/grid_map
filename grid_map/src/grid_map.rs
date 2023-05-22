@@ -115,10 +115,10 @@ where
     }
 
     /// Convert position into grid
-    pub fn to_grid(&self, position: &Position) -> Option<Grid> {
+    pub fn to_grid(&self, x: f64, y: f64) -> Option<Grid> {
         //let index = self.to_index_by_position(position)?;
         //self.to_grid_from_index(index)
-        self.grid_converter.to_grid(position)
+        self.grid_converter.to_grid(&Position::new(x, y))
     }
 
     // Get cell by grid
@@ -211,37 +211,22 @@ mod tests {
     #[test]
     fn test_to_index() {
         let map = GridMap::<u8>::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
-        assert_eq!(
-            map.to_index(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
-                .unwrap(),
-            9
-        );
-        assert_eq!(
-            map.to_index(&map.to_grid(&Position::new(0.35, 0.4)).unwrap())
-                .unwrap(),
-            10
-        );
-        assert_eq!(
-            map.to_index(&map.to_grid(&Position::new(0.4, 0.4)).unwrap())
-                .unwrap(),
-            11
-        );
-        assert!(&map.to_grid(&Position::new(0.0, 0.4)).is_none());
+        assert_eq!(map.to_index(&map.to_grid(0.3, 0.4).unwrap()).unwrap(), 9);
+        assert_eq!(map.to_index(&map.to_grid(0.35, 0.4).unwrap()).unwrap(), 10);
+        assert_eq!(map.to_index(&map.to_grid(0.4, 0.4).unwrap()).unwrap(), 11);
+        assert!(&map.to_grid(0.0, 0.4).is_none());
     }
 
     #[test]
     fn test_value() {
         let mut map = GridMap::new(Position::new(0.1, 0.2), Position::new(0.5, 0.8), 0.1);
         assert_eq!(
-            *map.cell(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
-                .unwrap(),
+            *map.cell(&map.to_grid(0.3, 0.4).unwrap()).unwrap(),
             Cell::Uninitialized
         );
-        map.set_value(&map.to_grid(&Position::new(0.3, 0.4)).unwrap(), 1.0)
-            .unwrap();
+        map.set_value(&map.to_grid(0.3, 0.4).unwrap(), 1.0).unwrap();
         assert_eq!(
-            *map.cell(&map.to_grid(&Position::new(0.3, 0.4)).unwrap())
-                .unwrap(),
+            *map.cell(&map.to_grid(0.3, 0.4).unwrap()).unwrap(),
             Cell::Value(1.0)
         );
     }

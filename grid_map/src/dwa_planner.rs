@@ -52,7 +52,7 @@ fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> 
     let mut cost: f64 = 0.0;
     for p in positions {
         // TODO: Support allow Unknown
-        if let Some(grid) = map.to_grid(p) {
+        if let Some(grid) = map.to_grid(p.x, p.y) {
             if let Some(cell) = map.cell(&grid) {
                 match cell {
                     Cell::Value(v) => {
@@ -214,8 +214,7 @@ mod tests {
             &goal,
             |p: &[f64]| {
                 !matches!(
-                    map.cell(&map.to_grid(&Position::new(p[0], p[1])).unwrap())
-                        .unwrap(),
+                    map.cell(&map.to_grid(p[0], p[1]).unwrap()).unwrap(),
                     Cell::Obstacle
                 )
             },
@@ -230,18 +229,17 @@ mod tests {
 
         let path_grid = result
             .iter()
-            .map(|p| map.to_grid(&Position::new(p[0], p[1])).unwrap())
+            .map(|p| map.to_grid(p[0], p[1]).unwrap())
             .collect::<Vec<_>>();
 
         for p in result {
-            map.set_value(&map.to_grid(&Position::new(p[0], p[1])).unwrap(), 0)
-                .unwrap();
+            map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
         }
         show_ascii_map(&map, 1.0);
         let path_distance_map = path_distance_map(&map, &path_grid);
         show_ascii_map(&path_distance_map, 1.0);
         println!("=======================");
-        let goal_grid = map.to_grid(&Position::new(goal[0], goal[1])).unwrap();
+        let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
         let goal_distance_map = goal_distance_map(&map, &goal_grid);
         show_ascii_map(&goal_distance_map, 0.1);
         println!("=======================");
@@ -293,10 +291,9 @@ mod tests {
             );
             current_velocity = plan.velocity;
             current_pose = plan.path[0];
-            if let Some(grid) = plan_map.to_grid(&Position::new(
-                current_pose.translation.x,
-                current_pose.translation.y,
-            )) {
+            if let Some(grid) =
+                plan_map.to_grid(current_pose.translation.x, current_pose.translation.y)
+            {
                 let _ = plan_map.set_value(&grid, 9);
             } else {
                 println!("OUT OF MAP!");
