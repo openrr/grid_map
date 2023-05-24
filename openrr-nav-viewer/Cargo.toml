@@ -1,18 +1,17 @@
 [package]
-name = "openrr-nav"
+name = "openrr-nav-viewer"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bevy = "0.10"
+bevy_egui = "0.20"
+egui = "0.20"
 nalgebra = "0.32"
-grid_map = "0.1"
-arci = "0.1"
-thiserror = "1"
 parking_lot = "0.12"
-
-[dev-dependencies]
+grid_map = { path = "../grid_map" }
+openrr-nav = { path = "../openrr-nav" }
 rand = "0.8"
 rrt = "0.7"
-bevy = "0.10"
