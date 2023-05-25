@@ -4,7 +4,7 @@ use openrr_nav::*;
 use openrr_nav_viewer::*;
 use parking_lot::Mutex;
 use rand::distributions::{Distribution, Uniform};
-use rrt;
+
 use std::{collections::HashMap, sync::Arc};
 
 fn new_sample_map() -> GridMap<u8> {
@@ -31,14 +31,18 @@ fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
 }
 
 fn main() {
-    let aaa = Arc::new(Mutex::new(SharedStructure::new()));
+    let layered_grid_map = Arc::new(Mutex::new(LayeredGridMap::default()));
+    let robot_path = Arc::new(Mutex::new(NavigationRobotPath::default()));
+    let robot_pose = Arc::new(Mutex::new(Pose::default()));
 
-    let cloned = Arc::clone(&aaa);
+    let cloned_layered_grid_map = layered_grid_map.clone();
+    let cloned_robot_path = robot_path.clone();
+    let cloned_robot_pose = robot_pose.clone();
 
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(1000));
-
-        let mut them = cloned.lock();
+        let mut locked_layered_grid_map = cloned_layered_grid_map.lock();
+        let mut locked_robot_path = cloned_robot_path.lock();
+        let mut locked_robot_pose = cloned_robot_pose.lock();
 
         let mut map = new_sample_map();
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
@@ -63,8 +67,7 @@ fn main() {
         )
         .unwrap();
 
-        them.robot_path
-            .set_global_path(robot_path_from_vec_vec(result.clone()));
+        locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
 
         let path_grid = result
             .iter()
@@ -82,11 +85,9 @@ fn main() {
 
         let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
-        them.layered_grid_map
-            .add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
-        them.layered_grid_map
-            .add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
-        them.layered_grid_map
+        locked_layered_grid_map.add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
+        locked_layered_grid_map.add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
+        locked_layered_grid_map
             .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
 
         let mut weights = HashMap::new();
@@ -121,14 +122,14 @@ fn main() {
 
         for i in 0..100 {
             let plan =
-                planner.plan_local_path(&current_pose, &current_velocity, &them.layered_grid_map);
+                planner.plan_local_path(&current_pose, &current_velocity, &locked_layered_grid_map);
 
-            them.robot_path.set_local_path(RobotPath(plan.path.clone()));
+            locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
 
             current_velocity = plan.velocity;
             current_pose = plan.path[0];
 
-            them.robot_pose = current_pose;
+            *locked_robot_pose = current_pose;
 
             std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -150,7 +151,18 @@ fn main() {
         }
     });
 
-    let res = ResSharedStructure(Arc::clone(&aaa));
+    let bevy_cloned_layered_grid_map = Arc::clone(&layered_grid_map);
+    let bevy_cloned_robot_path = Arc::clone(&robot_path);
+    let bevy_cloned_robot_pose = Arc::clone(&robot_pose);
 
-    BevyAppNav::run(res);
+    // Setup for Bevy app.
+    let res_layered_grid_map = ResLayeredGridMap(bevy_cloned_layered_grid_map);
+    let res_robot_path = ResNavRobotPath(bevy_cloned_robot_path);
+    let res_robot_pose = ResPose(bevy_cloned_robot_pose);
+
+    let mut app = BevyAppNav::new();
+
+    app.setup(res_layered_grid_map, res_robot_path, res_robot_pose);
+
+    app.run();
 }
