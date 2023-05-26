@@ -143,6 +143,22 @@ impl DwaPlanner {
         poses
     }
 
+    /// Get predicted plan candidates
+    pub fn predicted_plan_candidate(
+        &self,
+        current_pose: &Pose,
+        current_velocity: &Velocity,
+    ) -> Vec<Plan> {
+        self.sample_velocity(current_velocity)
+            .into_iter()
+            .map(|v| Plan {
+                velocity: v.to_owned(),
+                cost: 0.0,
+                path: self.forward_simulation(current_pose, &v),
+            })
+            .collect::<Vec<_>>()
+    }
+
     /// Plan the path using forward simulation
     pub fn plan_local_path(
         &self,
@@ -150,15 +166,7 @@ impl DwaPlanner {
         current_velocity: &Velocity,
         maps: &LayeredGridMap<u8>,
     ) -> Plan {
-        let plans = self
-            .sample_velocity(current_velocity)
-            .into_iter()
-            .map(|v| Plan {
-                velocity: v.to_owned(),
-                cost: 0.0,
-                path: self.forward_simulation(current_pose, &v),
-            })
-            .collect::<Vec<_>>();
+        let plans = self.predicted_plan_candidate(current_pose, current_velocity);
         let mut min_cost = f64::MAX;
         let mut selected_plan = Plan::default();
         for plan in plans {

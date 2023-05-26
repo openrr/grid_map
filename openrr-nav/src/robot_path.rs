@@ -65,4 +65,8 @@ impl NavigationRobotPath {
     pub fn get_user_defined_path(&self, key: &str) -> Option<&RobotPath> {
         self.user_defined_path.get(key)
     }
+
+    pub fn get_user_defined_path_as_iter(&self) -> impl Iterator<Item = (&String, &RobotPath)> {
+        self.user_defined_path.iter()
+    }
 }
