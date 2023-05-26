@@ -40,19 +40,19 @@ pub fn parse_grid_map_to_polygon(grid_map: &GridMap<u8>) -> Vec<Polygon> {
     polygons
 }
 
-pub fn parse_robot_path_to_line(robot_path: &RobotPath, color: Color32) -> Line {
+pub fn parse_robot_path_to_line(robot_path: &RobotPath, color: Color32, line_width: f32) -> Line {
     let plot_points: PlotPoints = robot_path
         .0
         .iter()
         .map(|&p| [p.translation.x, p.translation.y])
         .collect();
-    Line::new(plot_points).width(10.).color(color)
+    Line::new(plot_points).color(color).width(line_width)
 }
 
-pub fn parse_robot_pose_to_point(robot_pose: &Pose, color: Color32) -> Points {
+pub fn parse_robot_pose_to_point(robot_pose: &Pose, color: Color32, point_radius: f32) -> Points {
     let x = robot_pose.translation.x;
     let y = robot_pose.translation.y;
     let plot_point: PlotPoints = PlotPoints::new(vec![[x, y]]);
 
-    Points::new(plot_point).radius(10.).color(color)
+    Points::new(plot_point).color(color).radius(point_radius)
 }

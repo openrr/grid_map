@@ -101,12 +101,23 @@ pub fn update_system(
 
             // Plot path
             let path = res_robot_path.0.lock();
-            plot_ui.line(parse_robot_path_to_line(path.global_path(), Color32::BLUE));
-            plot_ui.line(parse_robot_path_to_line(path.local_path(), Color32::YELLOW));
+            plot_ui.line(parse_robot_path_to_line(
+                path.global_path(),
+                Color32::BLUE,
+                10.,
+            ));
+            plot_ui.line(parse_robot_path_to_line(
+                path.local_path(),
+                Color32::RED,
+                10.,
+            ));
+            for (_, p) in path.get_user_defined_path_as_iter() {
+                plot_ui.line(parse_robot_path_to_line(p, Color32::LIGHT_YELLOW, 3.));
+            }
 
             // Plot robot pose
             let pose = res_robot_pose.0.lock();
-            plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED));
+            plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED, 10.));
         });
     });
 }
