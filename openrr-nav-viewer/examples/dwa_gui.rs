@@ -40,10 +40,6 @@ fn main() {
     let cloned_robot_pose = robot_pose.clone();
 
     std::thread::spawn(move || {
-        let mut locked_layered_grid_map = cloned_layered_grid_map.lock();
-        let mut locked_robot_path = cloned_robot_path.lock();
-        let mut locked_robot_pose = cloned_robot_pose.lock();
-
         let mut map = new_sample_map();
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
         let y_range = Uniform::new(map.min_point().y, map.max_point().y);
@@ -67,8 +63,10 @@ fn main() {
         )
         .unwrap();
 
-        locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
-
+        {
+            let mut locked_robot_path = cloned_robot_path.lock();
+            locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
+        }
         let path_grid = result
             .iter()
             .map(|p| map.to_grid(p[0], p[1]).unwrap())
@@ -85,11 +83,13 @@ fn main() {
 
         let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
-        locked_layered_grid_map.add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
-        locked_layered_grid_map.add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
-        locked_layered_grid_map
-            .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
-
+        {
+            let mut locked_layered_grid_map = cloned_layered_grid_map.lock();
+            locked_layered_grid_map.add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
+            locked_layered_grid_map.add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
+            locked_layered_grid_map
+                .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
+        }
         let mut weights = HashMap::new();
         weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
         weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
@@ -121,16 +121,22 @@ fn main() {
         let mut plan_map = map.clone();
 
         for i in 0..100 {
-            let plan =
-                planner.plan_local_path(&current_pose, &current_velocity, &locked_layered_grid_map);
-
-            locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
+            let plan = {
+                let locked_layered_grid_map = cloned_layered_grid_map.lock();
+                planner.plan_local_path(&current_pose, &current_velocity, &locked_layered_grid_map)
+            };
+            {
+                let mut locked_robot_path = cloned_robot_path.lock();
+                locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
+            }
 
             current_velocity = plan.velocity;
             current_pose = plan.path[0];
 
-            *locked_robot_pose = current_pose;
-
+            {
+                let mut locked_robot_pose = cloned_robot_pose.lock();
+                *locked_robot_pose = current_pose;
+            }
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             if let Some(grid) =
