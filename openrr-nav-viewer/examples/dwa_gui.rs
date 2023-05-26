@@ -121,13 +121,26 @@ fn main() {
         let mut plan_map = map.clone();
 
         for i in 0..100 {
-            let plan = {
+            let (plan, candidates) = {
                 let locked_layered_grid_map = cloned_layered_grid_map.lock();
-                planner.plan_local_path(&current_pose, &current_velocity, &locked_layered_grid_map)
+                (
+                    planner.plan_local_path(
+                        &current_pose,
+                        &current_velocity,
+                        &locked_layered_grid_map,
+                    ),
+                    planner.predicted_plan_candidate(&current_pose, &current_velocity),
+                )
             };
             {
                 let mut locked_robot_path = cloned_robot_path.lock();
                 locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
+                for (i, candidate) in candidates.iter().enumerate() {
+                    locked_robot_path.add_user_defined_path(
+                        &format!("candidate_{}", i),
+                        RobotPath(candidate.path.clone()),
+                    );
+                }
             }
 
             current_velocity = plan.velocity;
