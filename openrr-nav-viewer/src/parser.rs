@@ -1,6 +1,6 @@
 use bevy_egui::egui::{
     plot::{Line, PlotPoints, Points, Polygon},
-    Color32,
+    Color32, epaint::Hsva,
 };
 use grid_map::*;
 use openrr_nav::*;
@@ -28,7 +28,7 @@ pub fn parse_grid_map_to_polygon(grid_map: &GridMap<u8>) -> Vec<Polygon> {
                 .color(Color32::from_gray(120))
                 .fill_alpha(1.0),
             Cell::Value(v) => Polygon::new(plot_points)
-                .color(Color32::from_rgb(*v * 2, 120, 120))
+                .color(Hsva::new(*v as f32 / 360.0, 1.0, 1.0, 1.0))
                 .fill_alpha(1.0),
             _ => Polygon::new(plot_points)
                 .color(Color32::from_gray(0))
