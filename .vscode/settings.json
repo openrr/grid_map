@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./openrr-nav/Cargo.toml"
+    ]
+}

@@ -12,3 +12,6 @@ pub struct ResNavRobotPath(pub Arc<Mutex<NavigationRobotPath>>);
 
 #[derive(Resource)]
 pub struct ResPose(pub Arc<Mutex<Pose>>);
+
+#[derive(Resource)]
+pub struct ResNavigator(pub Arc<Mutex<Navigator>>);
