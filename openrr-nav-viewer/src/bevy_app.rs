@@ -44,6 +44,7 @@ impl BevyAppNav {
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
             .add_startup_system(setup_system)
+            .add_system(ui_system)
             .add_system(update_system);
     }
 
@@ -59,17 +60,9 @@ pub fn update_system(
     res_layered_grid_map: Res<ResLayeredGridMap>,
     res_robot_path: Res<ResNavRobotPath>,
     res_robot_pose: Res<ResPose>,
-    mut map_type: ResMut<MapType>,
+    map_type: Res<MapType>,
 ) {
     let ctx = contexts.ctx_mut();
-
-    egui::SidePanel::left("left_side_panel")
-        .default_width(200.)
-        .show(ctx, |ui| {
-            ui.radio_value(map_type.as_mut(), MapType::PathDistanceMap, "Path");
-            ui.radio_value(map_type.as_mut(), MapType::GoalDistanceMap, "Goal");
-            ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
-        });
 
     egui::CentralPanel::default().show(ctx, |ui| {
         Plot::new("Map").data_aspect(1.).show(ui, |plot_ui| {
@@ -120,4 +113,16 @@ pub fn update_system(
             plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED, 10.));
         });
     });
+}
+
+pub fn ui_system(mut contexts: EguiContexts, mut map_type: ResMut<MapType>) {
+    let ctx = contexts.ctx_mut();
+
+    egui::SidePanel::left("left_side_panel")
+        .default_width(200.)
+        .show(ctx, |ui| {
+            ui.radio_value(map_type.as_mut(), MapType::PathDistanceMap, "Path");
+            ui.radio_value(map_type.as_mut(), MapType::GoalDistanceMap, "Goal");
+            ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
+        });
 }
