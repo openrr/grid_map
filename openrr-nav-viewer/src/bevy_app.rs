@@ -10,8 +10,9 @@ pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
 
+#[derive(Default)]
 pub struct BevyAppNav {
-    pub app: App,
+    app: App,
 }
 
 impl BevyAppNav {
@@ -43,7 +44,6 @@ impl BevyAppNav {
             .insert_resource(map_type)
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
-            .add_startup_system(setup_system)
             .add_system(ui_system)
             .add_system(update_system);
     }
@@ -53,9 +53,7 @@ impl BevyAppNav {
     }
 }
 
-pub fn setup_system(mut _contexts: EguiContexts) {}
-
-pub fn update_system(
+fn update_system(
     mut contexts: EguiContexts,
     res_layered_grid_map: Res<ResLayeredGridMap>,
     res_robot_path: Res<ResNavRobotPath>,
@@ -115,7 +113,7 @@ pub fn update_system(
     });
 }
 
-pub fn ui_system(mut contexts: EguiContexts, mut map_type: ResMut<MapType>) {
+fn ui_system(mut contexts: EguiContexts, mut map_type: ResMut<MapType>) {
     let ctx = contexts.ctx_mut();
 
     egui::SidePanel::left("left_side_panel")

@@ -1,6 +1,7 @@
 use bevy_egui::egui::{
+    epaint::Hsva,
     plot::{Line, PlotPoints, Points, Polygon},
-    Color32, epaint::Hsva,
+    Color32,
 };
 use grid_map::*;
 use openrr_nav::*;

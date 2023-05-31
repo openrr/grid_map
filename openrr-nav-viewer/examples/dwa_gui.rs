@@ -129,7 +129,7 @@ fn main() {
                         &current_velocity,
                         &locked_layered_grid_map,
                     ),
-                    planner.predicted_plan_candidate(&current_pose, &current_velocity),
+                    planner.predicted_plan_candidates(&current_pose, &current_velocity),
                 )
             };
             {
