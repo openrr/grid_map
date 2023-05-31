@@ -13,5 +13,7 @@ nalgebra = "0.32"
 parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
 openrr-nav = { path = "../openrr-nav" }
+
+[dev-dependencies]
 rand = "0.8"
 rrt = "0.7"

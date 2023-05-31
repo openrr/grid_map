@@ -144,7 +144,7 @@ impl DwaPlanner {
     }
 
     /// Get predicted plan candidates
-    pub fn predicted_plan_candidate(
+    pub fn predicted_plan_candidates(
         &self,
         current_pose: &Pose,
         current_velocity: &Velocity,
@@ -166,7 +166,7 @@ impl DwaPlanner {
         current_velocity: &Velocity,
         maps: &LayeredGridMap<u8>,
     ) -> Plan {
-        let plans = self.predicted_plan_candidate(current_pose, current_velocity);
+        let plans = self.predicted_plan_candidates(current_pose, current_velocity);
         let mut min_cost = f64::MAX;
         let mut selected_plan = Plan::default();
         for plan in plans {
