@@ -42,7 +42,7 @@ fn main() {
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
         let y_range = Uniform::new(map.min_point().y, map.max_point().y);
         let start = [-0.8, -0.9];
-        let goal = [2.5, 0.5];
+        let goal = [0.8, 0.6];
         let result = rrt::dual_rrt_connect(
             &start,
             &goal,
@@ -95,25 +95,6 @@ fn main() {
         weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
         weights.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), 0.3);
 
-        let planner = DwaPlanner::new(
-            Limits {
-                max_velocity: Velocity { x: 0.5, theta: 2.0 },
-                max_accel: Acceleration { x: 2.0, theta: 5.0 },
-                min_velocity: Velocity {
-                    x: 0.0,
-                    theta: -2.0,
-                },
-                min_accel: Acceleration {
-                    x: -2.0,
-                    theta: -5.0,
-                },
-            },
-            weights,
-            0.1,
-            1.0,
-            5,
-        );
-
         let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
         let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
 
@@ -127,7 +108,7 @@ fn main() {
                 let mut locked_navigator = cloned_navigator.lock();
                 locked_navigator.set_local_path_from_global_path();
                 plan = Plan {
-                    velocity: Velocity { x: 0.1, theta: 0.0 },
+                    velocity: Default::default(),
                     cost: Default::default(),
                     path: locked_navigator.nav_path.local_path().0.clone(),
                 };
@@ -140,7 +121,7 @@ fn main() {
                 let mut locked_navigator = cloned_navigator.lock();
                 locked_navigator.current_pose = current_pose;
             }
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            std::thread::sleep(std::time::Duration::from_millis(400));
 
             if let Some(grid) =
                 plan_map.to_grid(current_pose.translation.x, current_pose.translation.y)

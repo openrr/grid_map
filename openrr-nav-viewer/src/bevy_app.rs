@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, plot::Plot, Color32},
+    egui::{
+        self,
+        plot::{Line, Plot, PlotPoints},
+        Color32,
+    },
     EguiContexts, EguiPlugin,
 };
 
@@ -178,19 +182,32 @@ fn update_system_for_navigator(
             // Plot path
             let nav = res_navigator.0.lock();
             let path = &nav.nav_path;
+            // Global plan
             plot_ui.line(parse_robot_path_to_line(
                 path.global_path(),
                 Color32::BLUE,
                 10.,
             ));
+            // Local plan
             plot_ui.line(parse_robot_path_to_line(
                 path.local_path(),
-                Color32::RED,
+                Color32::LIGHT_GREEN,
                 10.,
             ));
-            for (_, p) in path.get_user_defined_path_as_iter() {
-                plot_ui.line(parse_robot_path_to_line(p, Color32::LIGHT_YELLOW, 3.));
-            }
+
+            // Plot robot local are
+            let rect = nav.get_local_area_rectangle_points();
+            plot_ui.line(
+                Line::new(PlotPoints::new(vec![
+                    [rect[0][0], rect[0][1]],
+                    [rect[1][0], rect[0][1]],
+                    [rect[1][0], rect[1][1]],
+                    [rect[0][0], rect[1][1]],
+                    [rect[0][0], rect[0][1]],
+                ]))
+                .width(2.)
+                .color(Color32::BLUE),
+            );
 
             // Plot robot pose
             let pose = nav.current_pose;
