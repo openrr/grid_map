@@ -3,12 +3,30 @@ use bevy_egui::{
     egui::{self, plot::Plot, Color32},
     EguiContexts, EguiPlugin,
 };
+use grid_map::Position;
 
 use crate::*;
 
 pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+
+#[derive(Debug, Resource)]
+pub struct UiCheckboxes {
+    pub set_start: bool,
+    pub set_goal: bool,
+    pub restart: bool,
+}
+
+impl Default for UiCheckboxes {
+    fn default() -> Self {
+        Self {
+            set_start: false,
+            set_goal: false,
+            restart: true,
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct BevyAppNav {
@@ -25,6 +43,8 @@ impl BevyAppNav {
         res_layered_grid_map: ResLayeredGridMap,
         res_robot_path: ResNavRobotPath,
         res_robot_pose: ResPose,
+        res_is_run: ResBool,
+        res_positions: ResVecPosition,
     ) {
         let user_plugin = DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -36,12 +56,16 @@ impl BevyAppNav {
         });
 
         let map_type = MapType::default();
+        let ui_checkboxes = UiCheckboxes::default();
 
         self.app
             .insert_resource(res_layered_grid_map)
             .insert_resource(res_robot_path)
             .insert_resource(res_robot_pose)
+            .insert_resource(res_is_run)
+            .insert_resource(res_positions)
             .insert_resource(map_type)
+            .insert_resource(ui_checkboxes)
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
             .add_system(ui_system)
@@ -57,8 +81,11 @@ fn update_system(
     mut contexts: EguiContexts,
     res_layered_grid_map: Res<ResLayeredGridMap>,
     res_robot_path: Res<ResNavRobotPath>,
-    res_robot_pose: Res<ResPose>,
+    res_robot_pose: ResMut<ResPose>,
+    res_is_run: ResMut<ResBool>,
+    res_positions: ResMut<ResVecPosition>,
     map_type: Res<MapType>,
+    mut ui_checkboxes: ResMut<UiCheckboxes>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -109,11 +136,39 @@ fn update_system(
             // Plot robot pose
             let pose = res_robot_pose.0.lock();
             plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED, 10.));
+
+            let aaa = plot_ui.pointer_coordinate();
+
+            if ui_checkboxes.set_start
+                && aaa.is_some()
+                && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                && !ctx.is_pointer_over_area()
+            {
+                ui_checkboxes.set_start = false;
+                let mut start_position = res_positions.0.lock();
+                start_position[0] = Position::new(aaa.unwrap().x, aaa.unwrap().y);
+            }
+
+            if ui_checkboxes.set_goal
+                && aaa.is_some()
+                && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                && !ctx.is_pointer_over_area()
+            {
+                ui_checkboxes.set_goal = false;
+                let mut goal_position = res_positions.0.lock();
+                goal_position[1] = Position::new(aaa.unwrap().x, aaa.unwrap().y);
+                let mut is_run = res_is_run.0.lock();
+                *is_run = true;
+            }
         });
     });
 }
 
-fn ui_system(mut contexts: EguiContexts, mut map_type: ResMut<MapType>) {
+fn ui_system(
+    mut contexts: EguiContexts,
+    mut map_type: ResMut<MapType>,
+    mut ui_checkboxes: ResMut<UiCheckboxes>,
+) {
     let ctx = contexts.ctx_mut();
 
     egui::SidePanel::left("left_side_panel")
@@ -122,5 +177,23 @@ fn ui_system(mut contexts: EguiContexts, mut map_type: ResMut<MapType>) {
             ui.radio_value(map_type.as_mut(), MapType::PathDistanceMap, "Path");
             ui.radio_value(map_type.as_mut(), MapType::GoalDistanceMap, "Goal");
             ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
+
+            ui.horizontal(|h_ui| {
+                if h_ui.button("Set Start").clicked() {
+                    ui_checkboxes.set_start = !ui_checkboxes.set_start;
+                    ui_checkboxes.set_goal = false;
+                }
+                if h_ui.button("Set Goal").clicked() {
+                    ui_checkboxes.set_goal = !ui_checkboxes.set_goal;
+                    ui_checkboxes.set_start = false;
+                }
+            });
+            ui.label(if ui_checkboxes.set_start {
+                "Set start  "
+            } else if ui_checkboxes.set_goal {
+                "Set goal   "
+            } else {
+                "Choose mode"
+            });
         });
 }
