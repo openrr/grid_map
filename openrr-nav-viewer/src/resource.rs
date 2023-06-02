@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use grid_map::*;
 use openrr_nav::*;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{sync::Arc, collections::HashMap};
 
 #[derive(Resource)]
 pub struct ResLayeredGridMap(pub Arc<Mutex<LayeredGridMap<u8>>>);
@@ -21,3 +21,6 @@ pub struct ResVecPosition(pub Arc<Mutex<Vec<Position>>>);
 
 #[derive(Resource)]
 pub struct ResBool(pub Arc<Mutex<bool>>);
+
+#[derive(Resource)]
+pub struct ResHashMap(pub Arc<Mutex<HashMap<String, f64>>>);

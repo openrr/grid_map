@@ -39,12 +39,30 @@ fn main() {
         Position::new(-0.8, -0.9),
         Position::new(2.5, 0.5),
     ]));
+    let weights = Arc::new(Mutex::new(HashMap::new()));
 
     let cloned_layered_grid_map = layered_grid_map.clone();
     let cloned_robot_path = robot_path.clone();
     let cloned_robot_pose = robot_pose.clone();
     let cloned_is_run = is_run.clone();
     let cloned_positions = positions.clone();
+    let cloned_weights = weights.clone();
+
+    {
+        let mut weights = cloned_weights.lock();
+        weights.insert(
+            PATH_DISTANCE_MAP_NAME.to_owned(),
+            DEFAULT_PATH_DISTANCE_WEIGHT,
+        );
+        weights.insert(
+            GOAL_DISTANCE_MAP_NAME.to_owned(),
+            DEFAULT_GOAL_DISTANCE_WEIGHT,
+        );
+        weights.insert(
+            OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
+            DEFAULT_OBSTACLE_DISTANCE_WEIGHT,
+        );
+    }
 
     std::thread::spawn(move || loop {
         if cloned_is_run.lock().to_owned() {
@@ -105,10 +123,11 @@ fn main() {
                 locked_layered_grid_map
                     .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
             }
-            let mut weights = HashMap::new();
-            weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
-            weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
-            weights.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), 0.3);
+            let weights;
+            {
+                let locked_weights = cloned_weights.lock();
+                weights = locked_weights.clone();
+            }
 
             let planner = DwaPlanner::new(
                 Limits {
@@ -195,6 +214,7 @@ fn main() {
     let bevy_cloned_robot_pose = Arc::clone(&robot_pose);
     let bevy_cloned_is_run = Arc::clone(&is_run);
     let bevy_cloned_positions = Arc::clone(&positions);
+    let bevy_cloned_weights = Arc::clone(&weights);
 
     // Setup for Bevy app.
     let res_layered_grid_map = ResLayeredGridMap(bevy_cloned_layered_grid_map);
@@ -202,6 +222,7 @@ fn main() {
     let res_robot_pose = ResPose(bevy_cloned_robot_pose);
     let res_is_run = ResBool(bevy_cloned_is_run);
     let res_positions = ResVecPosition(bevy_cloned_positions);
+    let res_weights = ResHashMap(bevy_cloned_weights);
 
     let mut app = BevyAppNav::new();
 
@@ -211,6 +232,7 @@ fn main() {
         res_robot_pose,
         res_is_run,
         res_positions,
+        res_weights,
     );
 
     app.run();
