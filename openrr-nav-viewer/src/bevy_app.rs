@@ -10,6 +10,9 @@ use crate::*;
 pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
+pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
+pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
 
 #[derive(Debug, Resource)]
 pub struct UiCheckboxes {
@@ -45,6 +48,7 @@ impl BevyAppNav {
         res_robot_pose: ResPose,
         res_is_run: ResBool,
         res_positions: ResVecPosition,
+        res_weights: ResHashMap,
     ) {
         let user_plugin = DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -64,6 +68,7 @@ impl BevyAppNav {
             .insert_resource(res_robot_pose)
             .insert_resource(res_is_run)
             .insert_resource(res_positions)
+            .insert_resource(res_weights)
             .insert_resource(map_type)
             .insert_resource(ui_checkboxes)
             .add_plugins(user_plugin)
@@ -166,6 +171,7 @@ fn update_system(
 
 fn ui_system(
     mut contexts: EguiContexts,
+    mut weights: ResMut<ResHashMap>,
     mut map_type: ResMut<MapType>,
     mut ui_checkboxes: ResMut<UiCheckboxes>,
 ) {
@@ -195,5 +201,50 @@ fn ui_system(
             } else {
                 "Choose mode"
             });
+
+            let mut path_weight = weights
+                .0
+                .lock()
+                .get(PATH_DISTANCE_MAP_NAME)
+                .unwrap()
+                .to_owned() as f32;
+            ui.horizontal(|h_ui| {
+                h_ui.label("path weight");
+                h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
+            });
+            let mut goal_weight = weights
+                .0
+                .lock()
+                .get(GOAL_DISTANCE_MAP_NAME)
+                .unwrap()
+                .to_owned() as f32;
+            ui.horizontal(|h_ui| {
+                h_ui.label("goal weight");
+                h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
+            });
+            let mut obstacle_weight = weights
+                .0
+                .lock()
+                .get(OBSTACLE_DISTANCE_MAP_NAME)
+                .unwrap()
+                .to_owned() as f32;
+            ui.horizontal(|h_ui| {
+                h_ui.label("obstacle weight");
+                h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
+            });
+
+            if ui.button("Reset weights").clicked() {
+                path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
+                goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
+                obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
+            }
+
+            let mut mut_weights = weights.0.lock();
+            mut_weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
+            mut_weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
+            mut_weights.insert(
+                OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
+                obstacle_weight as f64,
+            );
         });
 }
