@@ -224,6 +224,11 @@ fn ui_system(
                 obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
             }
 
+            if ui.button("Rerun").clicked() {
+                let mut is_run = res_nav.is_run.lock();
+                *is_run = true;
+            }
+
             let mut weights = res_nav.weights.lock();
             weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
             weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
