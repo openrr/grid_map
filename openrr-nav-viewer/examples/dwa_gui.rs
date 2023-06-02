@@ -2,10 +2,7 @@ use grid_map::*;
 use nalgebra as na;
 use openrr_nav::*;
 use openrr_nav_viewer::*;
-use parking_lot::Mutex;
 use rand::distributions::{Distribution, Uniform};
-
-use std::{collections::HashMap, sync::Arc};
 
 fn new_sample_map() -> GridMap<u8> {
     let mut map =
@@ -31,50 +28,22 @@ fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
 }
 
 fn main() {
-    let layered_grid_map = Arc::new(Mutex::new(LayeredGridMap::default()));
-    let robot_path = Arc::new(Mutex::new(NavigationRobotPath::default()));
-    let robot_pose = Arc::new(Mutex::new(Pose::default()));
-    let is_run = Arc::new(Mutex::new(true));
-    let positions = Arc::new(Mutex::new(vec![
-        Position::new(-0.8, -0.9),
-        Position::new(2.5, 0.5),
-    ]));
-    let weights = Arc::new(Mutex::new(HashMap::new()));
+    let nav = NavigationViz::default();
 
-    let cloned_layered_grid_map = layered_grid_map.clone();
-    let cloned_robot_path = robot_path.clone();
-    let cloned_robot_pose = robot_pose.clone();
-    let cloned_is_run = is_run.clone();
-    let cloned_positions = positions.clone();
-    let cloned_weights = weights.clone();
-
-    {
-        let mut weights = cloned_weights.lock();
-        weights.insert(
-            PATH_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_PATH_DISTANCE_WEIGHT,
-        );
-        weights.insert(
-            GOAL_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_GOAL_DISTANCE_WEIGHT,
-        );
-        weights.insert(
-            OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_OBSTACLE_DISTANCE_WEIGHT,
-        );
-    }
+    let cloned_nav = nav.clone();
 
     std::thread::spawn(move || loop {
-        if cloned_is_run.lock().to_owned() {
+        if cloned_nav.is_run.lock().to_owned() {
             let mut map = new_sample_map();
             let x_range = Uniform::new(map.min_point().x, map.max_point().x);
             let y_range = Uniform::new(map.min_point().y, map.max_point().y);
             let start;
             let goal;
             {
-                let locked_positions = cloned_positions.lock();
-                start = [locked_positions[0].x, locked_positions[0].y];
-                goal = [locked_positions[1].x, locked_positions[1].y];
+                let locked_start = cloned_nav.start_position.lock();
+                start = [locked_start.x, locked_start.y];
+                let locked_goal = cloned_nav.goal_position.lock();
+                goal = [locked_goal.x, locked_goal.y];
             }
             let result = rrt::dual_rrt_connect(
                 &start,
@@ -95,7 +64,7 @@ fn main() {
             .unwrap();
 
             {
-                let mut locked_robot_path = cloned_robot_path.lock();
+                let mut locked_robot_path = cloned_nav.robot_path.lock();
                 locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
             }
             let path_grid = result
@@ -115,7 +84,7 @@ fn main() {
             let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
             {
-                let mut locked_layered_grid_map = cloned_layered_grid_map.lock();
+                let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
                 locked_layered_grid_map
                     .add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
                 locked_layered_grid_map
@@ -125,7 +94,7 @@ fn main() {
             }
             let weights;
             {
-                let locked_weights = cloned_weights.lock();
+                let locked_weights = cloned_nav.weights.lock();
                 weights = locked_weights.clone();
             }
 
@@ -156,7 +125,7 @@ fn main() {
 
             for i in 0..100 {
                 let (plan, candidates) = {
-                    let locked_layered_grid_map = cloned_layered_grid_map.lock();
+                    let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
                     (
                         planner.plan_local_path(
                             &current_pose,
@@ -167,7 +136,7 @@ fn main() {
                     )
                 };
                 {
-                    let mut locked_robot_path = cloned_robot_path.lock();
+                    let mut locked_robot_path = cloned_nav.robot_path.lock();
                     locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
                     for (i, candidate) in candidates.iter().enumerate() {
                         locked_robot_path.add_user_defined_path(
@@ -181,7 +150,7 @@ fn main() {
                 current_pose = plan.path[0];
 
                 {
-                    let mut locked_robot_pose = cloned_robot_pose.lock();
+                    let mut locked_robot_pose = cloned_nav.robot_pose.lock();
                     *locked_robot_pose = current_pose;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(50));
@@ -203,37 +172,14 @@ fn main() {
                 }
             }
             {
-                let mut is_run = cloned_is_run.lock();
+                let mut is_run = cloned_nav.is_run.lock();
                 *is_run = false;
             }
         }
     });
 
-    let bevy_cloned_layered_grid_map = Arc::clone(&layered_grid_map);
-    let bevy_cloned_robot_path = Arc::clone(&robot_path);
-    let bevy_cloned_robot_pose = Arc::clone(&robot_pose);
-    let bevy_cloned_is_run = Arc::clone(&is_run);
-    let bevy_cloned_positions = Arc::clone(&positions);
-    let bevy_cloned_weights = Arc::clone(&weights);
-
-    // Setup for Bevy app.
-    let res_layered_grid_map = ResLayeredGridMap(bevy_cloned_layered_grid_map);
-    let res_robot_path = ResNavRobotPath(bevy_cloned_robot_path);
-    let res_robot_pose = ResPose(bevy_cloned_robot_pose);
-    let res_is_run = ResBool(bevy_cloned_is_run);
-    let res_positions = ResVecPosition(bevy_cloned_positions);
-    let res_weights = ResHashMap(bevy_cloned_weights);
-
+    let bevy_cloned_nav = nav.clone();
     let mut app = BevyAppNav::new();
-
-    app.setup(
-        res_layered_grid_map,
-        res_robot_path,
-        res_robot_pose,
-        res_is_run,
-        res_positions,
-        res_weights,
-    );
-
+    app.setup(bevy_cloned_nav);
     app.run();
 }
