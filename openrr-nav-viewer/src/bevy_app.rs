@@ -41,15 +41,7 @@ impl BevyAppNav {
         Self { app: App::new() }
     }
 
-    pub fn setup(
-        &mut self,
-        res_layered_grid_map: ResLayeredGridMap,
-        res_robot_path: ResNavRobotPath,
-        res_robot_pose: ResPose,
-        res_is_run: ResBool,
-        res_positions: ResVecPosition,
-        res_weights: ResHashMap,
-    ) {
+    pub fn setup(&mut self, nav: NavigationViz) {
         let user_plugin = DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OpenRR Nav Viz".to_owned(),
@@ -63,12 +55,7 @@ impl BevyAppNav {
         let ui_checkboxes = UiCheckboxes::default();
 
         self.app
-            .insert_resource(res_layered_grid_map)
-            .insert_resource(res_robot_path)
-            .insert_resource(res_robot_pose)
-            .insert_resource(res_is_run)
-            .insert_resource(res_positions)
-            .insert_resource(res_weights)
+            .insert_resource(nav)
             .insert_resource(map_type)
             .insert_resource(ui_checkboxes)
             .add_plugins(user_plugin)
@@ -84,11 +71,7 @@ impl BevyAppNav {
 
 fn update_system(
     mut contexts: EguiContexts,
-    res_layered_grid_map: Res<ResLayeredGridMap>,
-    res_robot_path: Res<ResNavRobotPath>,
-    res_robot_pose: ResMut<ResPose>,
-    res_is_run: ResMut<ResBool>,
-    res_positions: ResMut<ResVecPosition>,
+    res_nav: Res<NavigationViz>,
     map_type: Res<MapType>,
     mut ui_checkboxes: ResMut<UiCheckboxes>,
 ) {
@@ -97,7 +80,7 @@ fn update_system(
     egui::CentralPanel::default().show(ctx, |ui| {
         Plot::new("Map").data_aspect(1.).show(ui, |plot_ui| {
             // Plot map
-            let map = res_layered_grid_map.0.lock();
+            let map = res_nav.layered_grid_map.lock();
             match map_type.as_ref() {
                 MapType::PathDistanceMap => {
                     if let Some(dist_map) = map.layer(PATH_DISTANCE_MAP_NAME) {
@@ -123,7 +106,7 @@ fn update_system(
             }
 
             // Plot path
-            let path = res_robot_path.0.lock();
+            let path = res_nav.robot_path.lock();
             plot_ui.line(parse_robot_path_to_line(
                 path.global_path(),
                 Color32::BLUE,
@@ -139,31 +122,33 @@ fn update_system(
             }
 
             // Plot robot pose
-            let pose = res_robot_pose.0.lock();
+            let pose = res_nav.robot_pose.lock();
             plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED, 10.));
 
-            let aaa = plot_ui.pointer_coordinate();
+            let pointer_coordinate = plot_ui.pointer_coordinate();
 
-            if ui_checkboxes.set_start
-                && aaa.is_some()
-                && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
-                && !ctx.is_pointer_over_area()
-            {
-                ui_checkboxes.set_start = false;
-                let mut start_position = res_positions.0.lock();
-                start_position[0] = Position::new(aaa.unwrap().x, aaa.unwrap().y);
+            if let Some(p) = pointer_coordinate {
+                if ui_checkboxes.set_start
+                    && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                    && !ctx.is_pointer_over_area()
+                {
+                    ui_checkboxes.set_start = false;
+                    let mut start_position = res_nav.start_position.lock();
+                    *start_position = Position::new(p.x, p.y);
+                }
             }
 
-            if ui_checkboxes.set_goal
-                && aaa.is_some()
-                && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
-                && !ctx.is_pointer_over_area()
-            {
-                ui_checkboxes.set_goal = false;
-                let mut goal_position = res_positions.0.lock();
-                goal_position[1] = Position::new(aaa.unwrap().x, aaa.unwrap().y);
-                let mut is_run = res_is_run.0.lock();
-                *is_run = true;
+            if let Some(p) = pointer_coordinate {
+                if ui_checkboxes.set_goal
+                    && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                    && !ctx.is_pointer_over_area()
+                {
+                    ui_checkboxes.set_goal = false;
+                    let mut goal_position = res_nav.goal_position.lock();
+                    *goal_position = Position::new(p.x, p.y);
+                    let mut is_run = res_nav.is_run.lock();
+                    *is_run = true;
+                }
             }
         });
     });
@@ -171,7 +156,7 @@ fn update_system(
 
 fn ui_system(
     mut contexts: EguiContexts,
-    mut weights: ResMut<ResHashMap>,
+    res_nav: Res<NavigationViz>,
     mut map_type: ResMut<MapType>,
     mut ui_checkboxes: ResMut<UiCheckboxes>,
 ) {
@@ -202,8 +187,8 @@ fn ui_system(
                 "Choose mode"
             });
 
-            let mut path_weight = weights
-                .0
+            let mut path_weight = res_nav
+                .weights
                 .lock()
                 .get(PATH_DISTANCE_MAP_NAME)
                 .unwrap()
@@ -212,8 +197,8 @@ fn ui_system(
                 h_ui.label("path weight");
                 h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
             });
-            let mut goal_weight = weights
-                .0
+            let mut goal_weight = res_nav
+                .weights
                 .lock()
                 .get(GOAL_DISTANCE_MAP_NAME)
                 .unwrap()
@@ -222,8 +207,8 @@ fn ui_system(
                 h_ui.label("goal weight");
                 h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
             });
-            let mut obstacle_weight = weights
-                .0
+            let mut obstacle_weight = res_nav
+                .weights
                 .lock()
                 .get(OBSTACLE_DISTANCE_MAP_NAME)
                 .unwrap()
@@ -239,10 +224,10 @@ fn ui_system(
                 obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
             }
 
-            let mut mut_weights = weights.0.lock();
-            mut_weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
-            mut_weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
-            mut_weights.insert(
+            let mut weights = res_nav.weights.lock();
+            weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
+            weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
+            weights.insert(
                 OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
                 obstacle_weight as f64,
             );
