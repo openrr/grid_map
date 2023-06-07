@@ -4,6 +4,7 @@ use bevy_egui::egui::{
     Color32,
 };
 use grid_map::*;
+use nalgebra as na;
 use openrr_nav::*;
 
 pub fn parse_grid_map_to_polygon(grid_map: &GridMap<u8>) -> Vec<Polygon> {
@@ -56,4 +57,25 @@ pub fn parse_robot_pose_to_point(robot_pose: &Pose, color: Color32, point_radius
     let plot_point: PlotPoints = PlotPoints::new(vec![[x, y]]);
 
     Points::new(plot_point).color(color).radius(point_radius)
+}
+
+pub fn parse_robot_pose_to_polygon(robot_pose: &Pose, color: Color32, scale: f64) -> Polygon {
+    let robot_size = scale * 0.04;
+    let vertices = vec![
+        na::Vector2::new(2. * robot_size, 0.),
+        na::Vector2::new(-robot_size, robot_size),
+        na::Vector2::new(-robot_size, -robot_size),
+    ];
+
+    let plot_point: PlotPoints = PlotPoints::new(
+        vertices
+            .into_iter()
+            .map(|v| {
+                let p = robot_pose.rotation * v + robot_pose.translation.vector;
+                [p[0], p[1]]
+            })
+            .collect(),
+    );
+
+    Polygon::new(plot_point).color(color).fill_alpha(1.0)
 }
