@@ -182,12 +182,18 @@ impl DwaPlanner {
                 );
                 all_layer_cost += cost;
             }
+            /*
+            const SPIN_COST: f64 = 1.0;
+            let spin_cost = (plan.path.last().unwrap().rotation / plan.path.first().unwrap().rotation).angle().abs() * SPIN_COST;
+            all_layer_cost += spin_cost;
+             */
             if all_layer_cost < min_cost {
                 min_cost = all_layer_cost;
                 selected_plan = plan.clone();
             }
         }
         selected_plan.cost = min_cost;
+        println!("min_cost = {min_cost}");
         selected_plan
     }
 }

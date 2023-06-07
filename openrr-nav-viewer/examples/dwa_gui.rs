@@ -9,12 +9,13 @@ use std::{collections::HashMap, sync::Arc};
 
 fn new_sample_map() -> GridMap<u8> {
     let mut map =
-        grid_map::GridMap::<u8>::new(Position::new(-1.05, -1.05), Position::new(3.05, 1.05), 0.05);
-    for i in 10..50 {
-        map.set_obstacle(&Grid::new(i + 10, 5)).unwrap();
-        map.set_obstacle(&Grid::new(i + 10, 6)).unwrap();
-        for j in 20..30 {
-            map.set_obstacle(&Grid::new(i, j)).unwrap();
+        grid_map::GridMap::<u8>::new(Position::new(-1.0, -1.0), Position::new(1.5, 1.0), 0.05);
+    for i in 10..40 {
+        map.set_obstacle(&Grid::new(i + 10, 25)).unwrap();
+        map.set_obstacle(&Grid::new(i + 10, 26)).unwrap();
+
+        for j in 10..20 {
+            map.set_obstacle(&Grid::new(i - 10, j)).unwrap();
         }
     }
     map
@@ -44,7 +45,7 @@ fn main() {
         let x_range = Uniform::new(map.min_point().x, map.max_point().x);
         let y_range = Uniform::new(map.min_point().y, map.max_point().y);
         let start = [-0.8, -0.9];
-        let goal = [2.5, 0.5];
+        let goal = [1.2, 0.8];
         let result = rrt::dual_rrt_connect(
             &start,
             &goal,
@@ -91,9 +92,9 @@ fn main() {
                 .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
         }
         let mut weights = HashMap::new();
-        weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
-        weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
-        weights.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), 0.3);
+        weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.5);
+        weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 1.2);
+        weights.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), 0.2);
 
         let planner = DwaPlanner::new(
             Limits {
@@ -120,7 +121,7 @@ fn main() {
         let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
         let mut plan_map = map.clone();
 
-        for i in 0..100 {
+        for i in 0..200 {
             let (plan, candidates) = {
                 let locked_layered_grid_map = cloned_layered_grid_map.lock();
                 (

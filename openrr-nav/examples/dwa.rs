@@ -91,6 +91,14 @@ fn main() {
         1.0,
         5,
     );
+    let mut rng = rand::thread_rng();
+    let mut start = vec![x_range.sample(&mut rng), y_range.sample(&mut rng)];
+    while matches!(
+        map.cell(&map.to_grid(start[0], start[1]).unwrap()).unwrap(),
+        Cell::Obstacle
+    ) {
+        start = vec![x_range.sample(&mut rng), y_range.sample(&mut rng)];
+    }
 
     let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
     let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
