@@ -84,21 +84,21 @@ fn update_system(
             match map_type.as_ref() {
                 MapType::PathDistanceMap => {
                     if let Some(dist_map) = map.layer(PATH_DISTANCE_MAP_NAME) {
-                        for p in parse_grid_map_to_polygon(dist_map) {
+                        for p in grid_map_to_polygon(dist_map) {
                             plot_ui.polygon(p);
                         }
                     }
                 }
                 MapType::GoalDistanceMap => {
                     if let Some(dist_map) = map.layer(GOAL_DISTANCE_MAP_NAME) {
-                        for p in parse_grid_map_to_polygon(dist_map) {
+                        for p in grid_map_to_polygon(dist_map) {
                             plot_ui.polygon(p);
                         }
                     }
                 }
                 MapType::ObstacleDistanceMap => {
                     if let Some(dist_map) = map.layer(OBSTACLE_DISTANCE_MAP_NAME) {
-                        for p in parse_grid_map_to_polygon(dist_map) {
+                        for p in grid_map_to_polygon(dist_map) {
                             plot_ui.polygon(p);
                         }
                     }
@@ -107,23 +107,15 @@ fn update_system(
 
             // Plot path
             let path = res_nav.robot_path.lock();
-            plot_ui.line(parse_robot_path_to_line(
-                path.global_path(),
-                Color32::BLUE,
-                10.,
-            ));
-            plot_ui.line(parse_robot_path_to_line(
-                path.local_path(),
-                Color32::RED,
-                10.,
-            ));
+            plot_ui.line(robot_path_to_line(path.global_path(), Color32::BLUE, 10.));
+            plot_ui.line(robot_path_to_line(path.local_path(), Color32::RED, 10.));
             for (_, p) in path.get_user_defined_path_as_iter() {
-                plot_ui.line(parse_robot_path_to_line(p, Color32::LIGHT_YELLOW, 3.));
+                plot_ui.line(robot_path_to_line(p, Color32::LIGHT_YELLOW, 3.));
             }
 
             // Plot robot pose
             let pose = res_nav.robot_pose.lock();
-            plot_ui.polygon(parse_robot_pose_to_polygon(&pose, Color32::DARK_RED, 1.));
+            plot_ui.polygon(robot_pose_to_polygon(&pose, Color32::DARK_RED, 1.));
 
             let pointer_coordinate = plot_ui.pointer_coordinate();
 
