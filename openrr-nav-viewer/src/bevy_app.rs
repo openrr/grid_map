@@ -123,7 +123,7 @@ fn update_system(
 
             // Plot robot pose
             let pose = res_nav.robot_pose.lock();
-            plot_ui.points(parse_robot_pose_to_point(&pose, Color32::DARK_RED, 10.));
+            plot_ui.polygon(parse_robot_pose_to_polygon(&pose, Color32::DARK_RED, 1.));
 
             let pointer_coordinate = plot_ui.pointer_coordinate();
 
