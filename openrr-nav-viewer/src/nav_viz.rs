@@ -38,7 +38,7 @@ impl Default for NavigationViz {
             layered_grid_map: Default::default(),
             robot_path: Default::default(),
             robot_pose: Default::default(),
-            is_run: Arc::new(Mutex::new(true)),
+            is_run: Arc::new(Mutex::new(false)),
             start_position: Arc::new(Mutex::new(Position::new(-0.8, -0.9))),
             goal_position: Arc::new(Mutex::new(Position::new(2.5, 0.5))),
             weights: Arc::new(Mutex::new(weights)),
@@ -94,7 +94,7 @@ where
             robot_velocity: Default::default(),
             start: Arc::new(Mutex::new(Position::new(-4.0, -4.0))),
             goal: Arc::new(Mutex::new(Position::new(4.0, 4.0))),
-            is_run: Arc::new(Mutex::new(true)),
+            is_run: Arc::new(Mutex::new(false)),
             move_base,
             localization,
         }

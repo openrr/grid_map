@@ -108,7 +108,7 @@ fn ui_system<M: MoveBase + 'static, L: Localization + 'static>(
                 "Choose mode"
             });
 
-            if ui.button("Rerun").clicked() {
+            if ui.button("Run").clicked() {
                 let mut is_run = res_nav.is_run.lock();
                 *is_run = true;
             }

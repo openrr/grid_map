@@ -220,7 +220,7 @@ fn ui_system(
                 obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
             }
 
-            if ui.button("Rerun").clicked() {
+            if ui.button("Run").clicked() {
                 let mut is_run = res_nav.is_run.lock();
                 *is_run = true;
             }
