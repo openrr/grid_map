@@ -6,14 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arci = "0.1"
 bevy = "0.10"
 bevy_egui = "0.20"
 egui = "0.20"
-nalgebra = "0.32"
+nalgebra = "0.30"
 parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
 openrr-nav = { path = "../openrr-nav" }
 
 [dev-dependencies]
+arci-ros = "0.1"
+arci-urdf-viz = "0.1"
 rand = "0.8"
 rrt = "0.7"

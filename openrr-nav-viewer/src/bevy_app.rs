@@ -108,7 +108,11 @@ fn update_system(
             // Plot path
             let path = res_nav.robot_path.lock();
             plot_ui.line(robot_path_to_line(path.global_path(), Color32::BLUE, 10.));
-            plot_ui.line(robot_path_to_line(path.local_path(), Color32::RED, 10.));
+            plot_ui.line(robot_path_to_line(
+                path.local_path(),
+                Color32::LIGHT_GREEN,
+                10.,
+            ));
             for (_, p) in path.get_user_defined_path_as_iter() {
                 plot_ui.line(robot_path_to_line(p, Color32::LIGHT_YELLOW, 3.));
             }

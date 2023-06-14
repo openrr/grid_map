@@ -1,3 +1,4 @@
+use arci::{BaseVelocity, Localization, MoveBase};
 use bevy::prelude::*;
 use grid_map::*;
 use openrr_nav::*;
@@ -42,5 +43,53 @@ impl Default for NavigationViz {
             goal_position: Arc::new(Mutex::new(Position::new(2.5, 0.5))),
             weights: Arc::new(Mutex::new(weights)),
         }
+    }
+}
+
+#[derive(Clone, Resource)]
+pub struct NavigationVizLite<M, L>
+where
+    M: MoveBase,
+    L: Localization,
+{
+    pub grid_map: Arc<Mutex<GridMap<u8>>>,
+    pub robot_velocity: Arc<Mutex<BaseVelocity>>,
+    pub start: Arc<Mutex<Position>>,
+    pub goal: Arc<Mutex<Position>>,
+    pub is_run: Arc<Mutex<bool>>,
+    pub move_base: Arc<Mutex<M>>,
+    pub localization: Arc<Mutex<L>>,
+}
+
+impl<M, L> NavigationVizLite<M, L>
+where
+    M: MoveBase,
+    L: Localization,
+{
+    pub fn new(move_base: Arc<Mutex<M>>, localization: Arc<Mutex<L>>) -> Self {
+        Self {
+            grid_map: Arc::new(Mutex::new(GridMap::<u8>::new(
+                // Position { x: -5.0, y: -5.0 },
+                // Position { x: 5.0, y: 5.0 },
+                Position { x: -0.8, y: -0.9 },
+                Position { x: 2.5, y: 0.5 },
+                0.05,
+            ))),
+            robot_velocity: Default::default(),
+            start: Arc::new(Mutex::new(Position::new(-4.0, -4.0))),
+            goal: Arc::new(Mutex::new(Position::new(4.0, 4.0))),
+            is_run: Arc::new(Mutex::new(true)),
+            move_base,
+            localization,
+        }
+    }
+
+    pub fn set_move_base(&self, move_base: M) {
+        let mut locked_move_base = self.move_base.lock();
+        *locked_move_base = move_base;
+    }
+    pub fn set_localization(&self, localization: L) {
+        let mut locked_localization = self.localization.lock();
+        *locked_localization = localization;
     }
 }
