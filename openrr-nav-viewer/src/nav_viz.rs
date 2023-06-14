@@ -46,7 +46,7 @@ impl Default for NavigationViz {
     }
 }
 
-#[derive(Clone, Resource)]
+#[derive(Resource)]
 pub struct NavigationVizLite<M, L>
 where
     M: MoveBase,
@@ -61,6 +61,24 @@ where
     pub localization: Arc<Mutex<L>>,
 }
 
+impl<M, L> Clone for NavigationVizLite<M, L>
+where
+    M: MoveBase,
+    L: Localization,
+{
+    fn clone(&self) -> Self {
+        Self {
+            grid_map: Arc::clone(&self.grid_map),
+            robot_velocity: Arc::clone(&self.robot_velocity),
+            start: Arc::clone(&self.start),
+            goal: Arc::clone(&self.goal),
+            is_run: Arc::clone(&self.is_run),
+            move_base: Arc::clone(&self.move_base),
+            localization: Arc::clone(&self.localization),
+        }
+    }
+}
+
 impl<M, L> NavigationVizLite<M, L>
 where
     M: MoveBase,
@@ -69,8 +87,6 @@ where
     pub fn new(move_base: Arc<Mutex<M>>, localization: Arc<Mutex<L>>) -> Self {
         Self {
             grid_map: Arc::new(Mutex::new(GridMap::<u8>::new(
-                // Position { x: -5.0, y: -5.0 },
-                // Position { x: 5.0, y: 5.0 },
                 Position { x: -0.8, y: -0.9 },
                 Position { x: 2.5, y: 0.5 },
                 0.05,

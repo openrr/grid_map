@@ -1,5 +1,5 @@
 use arci::Localization;
-use arci_urdf_viz::UrdfVizWebClient;
+use arci_ros::{RosCmdVelMoveBase, RosLocalizationClient};
 use grid_map::*;
 use openrr_nav::*;
 use openrr_nav_viewer::*;
@@ -21,13 +21,17 @@ fn new_square_map() -> GridMap<u8> {
     map
 }
 
-fn main() {
-    let move_base_client = Arc::new(Mutex::new({
-        let client = UrdfVizWebClient::default();
-        client.run_send_velocity_thread();
-        client
-    }));
-    let localization_client = Arc::new(Mutex::new(UrdfVizWebClient::default()));
+#[tokio::main]
+async fn main() {
+    arci_ros::init("openrr_nav");
+
+    let move_base_client = Arc::new(Mutex::new(RosCmdVelMoveBase::new("/cmd_vel")));
+
+    let localization_client = Arc::new(Mutex::new(RosLocalizationClient::new(
+        false,
+        "nomotion_update".to_owned(),
+        "amcl_pose".to_owned(),
+    )));
 
     let mut nav = NavigationVizLite::new(move_base_client, localization_client);
     nav.start = Arc::new(Mutex::new(Position::new(-0.8, -0.9)));

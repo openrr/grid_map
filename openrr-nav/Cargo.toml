@@ -16,3 +16,6 @@ parking_lot = "0.12"
 rand = "0.8"
 rrt = "0.7"
 bevy = "0.10"
+
+[patch.crates-io]
+arci = { git = "https://github.com/openrr/openrr" }

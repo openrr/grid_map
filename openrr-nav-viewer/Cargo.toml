@@ -18,5 +18,11 @@ openrr-nav = { path = "../openrr-nav" }
 [dev-dependencies]
 arci-ros = "0.1"
 arci-urdf-viz = "0.1"
+tokio = "1"
 rand = "0.8"
 rrt = "0.7"
+
+[patch.crates-io]
+arci = { git = "https://github.com/openrr/openrr" }
+arci-ros = { git = "https://github.com/openrr/openrr" }
+arci-urdf-viz = { git = "https://github.com/openrr/openrr" }
