@@ -99,13 +99,4 @@ where
             localization,
         }
     }
-
-    pub fn set_move_base(&self, move_base: M) {
-        let mut locked_move_base = self.move_base.lock();
-        *locked_move_base = move_base;
-    }
-    pub fn set_localization(&self, localization: L) {
-        let mut locked_localization = self.localization.lock();
-        *locked_localization = localization;
-    }
 }
