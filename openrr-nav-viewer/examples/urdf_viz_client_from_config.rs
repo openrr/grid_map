@@ -5,7 +5,7 @@ use openrr_nav::*;
 use openrr_nav_viewer::*;
 use parking_lot::Mutex;
 use rand::distributions::{Distribution, Uniform};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 fn new_square_map() -> GridMap<u8> {
     let mut map =
@@ -110,52 +110,19 @@ fn main() {
             layered_grid_map
                 .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
 
-            let mut weights = HashMap::new();
-            weights.insert(
-                PATH_DISTANCE_MAP_NAME.to_owned(),
-                DEFAULT_PATH_DISTANCE_WEIGHT,
-            );
-            weights.insert(
-                GOAL_DISTANCE_MAP_NAME.to_owned(),
-                DEFAULT_GOAL_DISTANCE_WEIGHT,
-            );
-            weights.insert(
-                OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
-                DEFAULT_OBSTACLE_DISTANCE_WEIGHT,
-            );
-
-            let planner = DwaPlanner::new(
-                Limits {
-                    max_velocity: Velocity { x: 0.5, theta: 2.0 },
-                    max_accel: Acceleration { x: 2.0, theta: 5.0 },
-                    min_velocity: Velocity {
-                        x: 0.0,
-                        theta: -2.0,
-                    },
-                    min_accel: Acceleration {
-                        x: -2.0,
-                        theta: -5.0,
-                    },
-                },
-                weights,
-                0.1,
-                1.0,
-                5,
-            );
-
             let mut current_pose;
             let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
 
             let move_base_client = cloned_nav.move_base.clone();
             let localization_client = cloned_nav.localization.clone();
 
-            let mut executor = LocalPlanExecutor::new(
+            let mut executor = local_plan_executor_from_yaml_config(
+                "./config/example_app.yaml",
                 move_base_client,
                 localization_client,
-                "".to_owned(),
-                planner,
-                layered_grid_map,
-            );
+            )
+            .unwrap();
+            executor.set_cost_maps(layered_grid_map);
 
             for i in 0..1000 {
                 executor.exec_once().unwrap();

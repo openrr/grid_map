@@ -4,12 +4,10 @@ use bevy_egui::{
     EguiContexts, EguiPlugin,
 };
 use grid_map::Position;
+use openrr_nav::{GOAL_DISTANCE_MAP_NAME, OBSTACLE_DISTANCE_MAP_NAME, PATH_DISTANCE_MAP_NAME};
 
 use crate::*;
 
-pub const PATH_DISTANCE_MAP_NAME: &str = "path";
-pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
-pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
 pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
 pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
 pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
