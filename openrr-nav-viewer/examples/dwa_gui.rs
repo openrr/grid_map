@@ -33,10 +33,7 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
     }
     let mut interpolated_path = vec![];
     interpolated_path.push(path.first().unwrap().clone());
-    for i in 0..(path.len() - 1) {
-        debug_assert_eq!(path[i].len(), 2);
-        let p0 = path[i].clone();
-        let p1 = path[i + 1].clone();
+    for (p0, p1) in path.iter().zip(path.iter().skip(1)) {
         let diff_x = p1[0] - p0[0];
         let diff_y = p1[1] - p0[1];
         let diff = (diff_x.powi(2) + diff_y.powi(2)).sqrt();
@@ -51,7 +48,7 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
                 ]);
             }
         } else {
-            interpolated_path.push(vec![path[i][0], path[i][1]]);
+            interpolated_path.push(p0.to_owned());
         }
     }
     interpolated_path.push(path.last().unwrap().clone());
