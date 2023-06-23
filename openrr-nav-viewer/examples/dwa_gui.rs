@@ -27,6 +27,37 @@ fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
     RobotPath(robot_path_inner)
 }
 
+fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f64>> {
+    if path.len() < 2 {
+        return path;
+    }
+    let mut interpolated_path = vec![];
+    interpolated_path.push(path.first().unwrap().clone());
+    for i in 0..(path.len() - 1) {
+        debug_assert_eq!(path[i].len(), 2);
+        let p0 = path[i].clone();
+        let p1 = path[i + 1].clone();
+        let diff_x = p1[0] - p0[0];
+        let diff_y = p1[1] - p0[1];
+        let diff = (diff_x.powi(2) + diff_y.powi(2)).sqrt();
+        let interpolate_num = (diff / extend_length) as usize;
+        if interpolate_num > 0 {
+            let unit_diff_x = diff_x / interpolate_num as f64;
+            let unit_diff_y = diff_y / interpolate_num as f64;
+            for j in 1..interpolate_num {
+                interpolated_path.push(vec![
+                    p0[0] + unit_diff_x * j as f64,
+                    p0[1] + unit_diff_y * j as f64,
+                ]);
+            }
+        } else {
+            interpolated_path.push(vec![path[i][0], path[i][1]]);
+        }
+    }
+    interpolated_path.push(path.last().unwrap().clone());
+    interpolated_path
+}
+
 fn main() {
     let nav = NavigationViz::default();
 
@@ -45,15 +76,17 @@ fn main() {
                 let locked_goal = cloned_nav.goal_position.lock();
                 goal = [locked_goal.x, locked_goal.y];
             }
-            let result = rrt::dual_rrt_connect(
+            let is_free = |p: &[f64]| {
+                !matches!(
+                    map.cell(&map.to_grid(p[0], p[1]).unwrap()).unwrap(),
+                    Cell::Obstacle
+                )
+            };
+            const EXTEND_LENGTH: f64 = 0.05;
+            let mut result = rrt::dual_rrt_connect(
                 &start,
                 &goal,
-                |p: &[f64]| {
-                    !matches!(
-                        map.cell(&map.to_grid(p[0], p[1]).unwrap()).unwrap(),
-                        Cell::Obstacle
-                    )
-                },
+                is_free,
                 || {
                     let mut rng = rand::thread_rng();
                     vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
@@ -62,7 +95,8 @@ fn main() {
                 1000,
             )
             .unwrap();
-
+            rrt::smooth_path(&mut result, is_free, EXTEND_LENGTH, 1000);
+            let result = linear_interpolate_path(result, EXTEND_LENGTH);
             {
                 let mut locked_robot_path = cloned_nav.robot_path.lock();
                 locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
