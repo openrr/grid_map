@@ -1,3 +1,6 @@
+use nalgebra::Isometry2;
+use std::time::Duration;
+
 /// Utility for debug
 pub fn show_ascii_map(map: &grid_map::GridMap<u8>, scale: f32) {
     use grid_map::Cell;
@@ -19,5 +22,39 @@ pub fn show_ascii_map(map: &grid_map::GridMap<u8>, scale: f32) {
             print!("{letter:}");
         }
         println!();
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Isometry2TimeStamp {
+    pose: Option<Isometry2<f64>>,
+    time: std::time::Instant,
+}
+
+impl Isometry2TimeStamp {
+    pub fn pose(&self) -> Isometry2<f64> {
+        self.pose.unwrap()
+    }
+
+    pub fn set_pose(&mut self, pose: Isometry2<f64>) {
+        self.pose = Some(pose);
+        self.time = std::time::Instant::now();
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.time.elapsed()
+    }
+
+    pub fn is_initialized(&self) -> bool {
+        self.pose.is_some()
+    }
+}
+
+impl Default for Isometry2TimeStamp {
+    fn default() -> Self {
+        Self {
+            pose: Default::default(),
+            time: std::time::Instant::now(),
+        }
     }
 }

@@ -75,6 +75,7 @@ where
     }
     let current_value = increment_func(previous_value);
     let mut current_grid = vec![];
+    let mut update_count = 0;
     for ind in previous_grids {
         // search +/-
         if map.cell(ind).is_none() {
@@ -87,9 +88,14 @@ where
                 }
                 *cell = Cell::Value(current_value);
                 current_grid.push(neighbor);
+                update_count += 1;
             }
         }
     }
+    if update_count == 0 {
+        return true;
+    }
+
     expand_distance_map_internal(map, &current_grid, current_value, increment_func)
 }
 

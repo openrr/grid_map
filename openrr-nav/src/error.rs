@@ -7,6 +7,8 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error("grid_map: {0:?}")]
     GridError(#[from] grid_map::Error),
+    #[error("Load config: {0}")]
+    FailedToLoadConfigFile(String),
     #[error("{0}")]
     Other(String),
 }

@@ -3,6 +3,10 @@ pub use na::Vector2;
 use nalgebra as na;
 use std::collections::HashMap;
 
+pub const PATH_DISTANCE_MAP_NAME: &str = "path";
+pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
+pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Velocity {
     pub x: f64,
@@ -263,9 +267,6 @@ mod tests {
         let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
         show_ascii_map(&obstacle_distance_map, 0.1);
         let mut maps = HashMap::new();
-        const PATH_DISTANCE_MAP_NAME: &str = "path";
-        const GOAL_DISTANCE_MAP_NAME: &str = "goal";
-        const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
         maps.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
         maps.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
         maps.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);

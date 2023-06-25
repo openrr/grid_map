@@ -32,8 +32,11 @@ pub fn grid_map_to_polygon(grid_map: &GridMap<u8>) -> Vec<Polygon> {
             Cell::Value(v) => Polygon::new(plot_points)
                 .color(Hsva::new(*v as f32 / 360.0, 1.0, 1.0, 1.0))
                 .fill_alpha(1.0),
-            _ => Polygon::new(plot_points)
-                .color(Color32::from_gray(0))
+            Cell::Obstacle => Polygon::new(plot_points)
+                .color(Color32::from_gray(40))
+                .fill_alpha(1.0),
+            Cell::Uninitialized => Polygon::new(plot_points)
+                .color(Color32::LIGHT_GRAY)
                 .fill_alpha(1.0),
         };
         polygons.push(polygon);

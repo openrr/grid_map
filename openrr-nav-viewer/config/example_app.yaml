@@ -1,0 +1,22 @@
+navigation_app_config:
+  init_pose_2d: [0.0, 0.0, 0.0]
+  map: ""
+  localization_client: "UrdfViz"
+  move_base_client: "UrdfViz"
+
+local_plan_executor_config:
+  planner_type: "dwa"
+  frame_id: "frame"
+
+dwa_planner_config:
+  max_velocity: [0.5, 2.0]
+  max_acceleration: [2.0, 5.0]
+  min_velocity: [0.0, -2.0]
+  min_accleration: [-2.0, -5.0]
+  distance_map_weight:
+    path: 0.8
+    goal: 0.9
+    obstacle: 0.3
+  controller_dt: 0.1
+  simulation_duration: 1.0
+  number_of_velocity_sample: 5
