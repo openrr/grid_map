@@ -14,6 +14,8 @@ parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
 openrr-nav = { path = "../openrr-nav" }
 
-[dev-dependencies]
+# TODO: back to dev-deps
 rand = "0.8"
 rrt = "0.7"
+
+[dev-dependencies]
