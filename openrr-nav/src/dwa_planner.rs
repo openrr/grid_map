@@ -190,6 +190,10 @@ impl DwaPlanner {
         selected_plan.cost = min_cost;
         selected_plan
     }
+
+    pub fn map_names(&self) -> impl Iterator<Item = &String> {
+        self.map_name_weight.keys()
+    }
 }
 
 #[cfg(test)]
