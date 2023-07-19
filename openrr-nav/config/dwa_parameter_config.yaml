@@ -11,6 +11,8 @@ DWAPlanner:
       value: 0.9
     - name: obstacle
       value: 0.3
+    - name: local_goal
+      value: 0.3
   controller_dt: 0.1
   simulation_duration: 1.0
   num_vel_sample: 5

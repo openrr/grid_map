@@ -10,9 +10,12 @@ use crate::*;
 pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+pub const LOCAL_GOAL_DISTANCE_MAP_NAME: &str = "local_goal";
+
 pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
 pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
 pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
+pub const DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT: f64 = 0.2;
 
 #[derive(Debug, Resource)]
 pub struct UiCheckboxes {
@@ -103,6 +106,13 @@ fn update_system(
                         }
                     }
                 }
+                MapType::LocalGoalDisranceMap => {
+                    if let Some(dist_map) = map.layer(LOCAL_GOAL_DISTANCE_MAP_NAME) {
+                        for p in grid_map_to_polygon(dist_map) {
+                            plot_ui.polygon(p);
+                        }
+                    }
+                }
             }
 
             // Plot path
@@ -161,6 +171,11 @@ fn ui_system(
             ui.radio_value(map_type.as_mut(), MapType::PathDistanceMap, "Path");
             ui.radio_value(map_type.as_mut(), MapType::GoalDistanceMap, "Goal");
             ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
+            ui.radio_value(
+                map_type.as_mut(),
+                MapType::LocalGoalDisranceMap,
+                "Local Goal",
+            );
             ui.label("");
             ui.separator();
             ui.label("");
@@ -217,6 +232,13 @@ fn ui_system(
                     h_ui.spacing_mut().slider_width = 250.;
                     h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
                 });
+                let mut local_goal_weight =
+                    weight.get(LOCAL_GOAL_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("local goal weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut local_goal_weight, 0.0..=1.0));
+                });
                 ui.label("");
 
                 ui.horizontal(|h_ui| {
@@ -227,6 +249,7 @@ fn ui_system(
                         path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
                         goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
                         obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
+                        local_goal_weight = DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT as f32;
                     }
                 });
 
@@ -245,6 +268,10 @@ fn ui_system(
                 weight.insert(
                     OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
                     obstacle_weight as f64,
+                );
+                weight.insert(
+                    LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                    local_goal_weight as f64,
                 );
             }
             ui.label("");

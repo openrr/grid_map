@@ -22,8 +22,8 @@ impl Default for NavigationViz {
             robot_path: Default::default(),
             robot_pose: Default::default(),
             is_run: Arc::new(Mutex::new(true)),
-            start_position: Arc::new(Mutex::new(Position::new(-0.8, -0.9))),
-            goal_position: Arc::new(Mutex::new(Position::new(2.5, 0.5))),
+            start_position: Arc::new(Mutex::new(Position::new(-1.6, -1.8))),
+            goal_position: Arc::new(Mutex::new(Position::new(5.0, 1.0))),
             planner: Arc::new(Mutex::new(DwaPlanner::default())),
         }
     }

@@ -1,5 +1,7 @@
 use grid_map::{Cell, Error, Grid, GridMap, Result};
 
+use crate::utils::nearest_path_point;
+
 /// Create path distance map
 pub fn path_distance_map(map: &GridMap<u8>, path: &[Grid]) -> Result<GridMap<u8>> {
     let mut path_distance_map = map.copy_without_value();
@@ -59,6 +61,20 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
         }
     });
     Ok(distance_map)
+}
+
+pub fn local_goal_distance_map(
+    map: &GridMap<u8>,
+    global_path: Vec<Vec<f64>>,
+    current_pose: [f64; 2],
+) -> Result<GridMap<u8>> {
+    let len = global_path.len();
+    let nearest = nearest_path_point(global_path.clone(), current_pose).unwrap();
+
+    let local_goal = global_path[(nearest.0 + 20).min(len - 1)].clone();
+    let grid = map.to_grid(local_goal[0], local_goal[1]).unwrap();
+
+    goal_distance_map(map, &grid)
 }
 
 pub fn expand_distance_map_internal<F>(
