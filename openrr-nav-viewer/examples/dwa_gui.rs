@@ -17,6 +17,23 @@ fn new_sample_map() -> GridMap<u8> {
     map
 }
 
+fn new_dynamic_sample_map(time: usize) -> GridMap<u8> {
+    let mut map =
+        grid_map::GridMap::<u8>::new(Position::new(-1.05, -1.05), Position::new(3.05, 1.05), 0.05);
+    for i in 10..50 {
+        map.set_obstacle(&Grid::new(i + 10, 5)).unwrap();
+        map.set_obstacle(&Grid::new(i + 10, 6)).unwrap();
+        for j in 20..30 {
+            map.set_obstacle(&Grid::new(i, j)).unwrap();
+        }
+    }
+    for i in 0..8 {
+        map.set_obstacle(&Grid::new(64, (4 + time / 3 + i).min(41)))
+            .unwrap();
+    }
+    map
+}
+
 fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
     let mut robot_path_inner = vec![];
     for p in path {
@@ -60,6 +77,16 @@ fn main() {
 
     let cloned_nav = nav.clone();
 
+    let planner = DwaPlanner::new_from_config(format!(
+        "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+        env!("CARGO_MANIFEST_DIR")
+    ));
+
+    {
+        let mut locked_planner = cloned_nav.planner.lock();
+        *locked_planner = planner;
+    }
+
     std::thread::spawn(move || loop {
         if cloned_nav.is_run.lock().to_owned() {
             let mut map = new_sample_map();
@@ -88,7 +115,7 @@ fn main() {
                     let mut rng = rand::thread_rng();
                     vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
                 },
-                0.05,
+                EXTEND_LENGTH,
                 1000,
             )
             .unwrap();
@@ -123,30 +150,6 @@ fn main() {
                 locked_layered_grid_map
                     .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
             }
-            let weights;
-            {
-                let locked_weights = cloned_nav.weights.lock();
-                weights = locked_weights.clone();
-            }
-
-            let planner = DwaPlanner::new(
-                Limits {
-                    max_velocity: Velocity { x: 0.5, theta: 2.0 },
-                    max_accel: Acceleration { x: 2.0, theta: 5.0 },
-                    min_velocity: Velocity {
-                        x: 0.0,
-                        theta: -2.0,
-                    },
-                    min_accel: Acceleration {
-                        x: -2.0,
-                        theta: -5.0,
-                    },
-                },
-                weights,
-                0.1,
-                1.0,
-                5,
-            );
 
             let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
             let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
@@ -155,15 +158,36 @@ fn main() {
             let mut plan_map = map.clone();
 
             for i in 0..100 {
+                let dynamic_map = new_dynamic_sample_map(i);
+                let path_distance_map =
+                    openrr_nav::path_distance_map(&dynamic_map, &path_grid).unwrap();
+
+                let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
+                let goal_distance_map =
+                    openrr_nav::goal_distance_map(&dynamic_map, &goal_grid).unwrap();
+
+                let obstacle_distance_map =
+                    openrr_nav::obstacle_distance_map(&dynamic_map).unwrap();
+
+                {
+                    let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                    locked_layered_grid_map
+                        .add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
+                    locked_layered_grid_map
+                        .add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
+                    locked_layered_grid_map
+                        .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
+                }
                 let (plan, candidates) = {
                     let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                    let locked_planner = cloned_nav.planner.lock();
                     (
-                        planner.plan_local_path(
+                        locked_planner.plan_local_path(
                             &current_pose,
                             &current_velocity,
                             &locked_layered_grid_map,
                         ),
-                        planner.predicted_plan_candidates(&current_pose, &current_velocity),
+                        locked_planner.predicted_plan_candidates(&current_pose, &current_velocity),
                     )
                 };
                 {

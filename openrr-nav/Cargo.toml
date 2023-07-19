@@ -11,6 +11,7 @@ grid_map = "0.1"
 arci = "0.1"
 thiserror = "1"
 parking_lot = "0.12"
+yaml-rust ="0.4"
 
 [dev-dependencies]
 rand = "0.8"

@@ -179,54 +179,53 @@ fn ui_system(
                 "Choose mode"
             });
 
-            let mut path_weight = res_nav
-                .weights
-                .lock()
-                .get(PATH_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("path weight");
-                h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
-            });
-            let mut goal_weight = res_nav
-                .weights
-                .lock()
-                .get(GOAL_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("goal weight");
-                h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
-            });
-            let mut obstacle_weight = res_nav
-                .weights
-                .lock()
-                .get(OBSTACLE_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("obstacle weight");
-                h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
-            });
+            {
+                let mut planner = res_nav.planner.lock();
+                let weight = planner.get_map_name_weight_mut();
+                let mut path_weight = weight.get(PATH_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.label("path weight");
+                    h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
+                });
+                let mut goal_weight = weight.get(GOAL_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.label("goal weight");
+                    h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
+                });
+                let mut obstacle_weight =
+                    weight.get(OBSTACLE_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.label("obstacle weight");
+                    h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
+                });
 
-            if ui.button("Reset weights").clicked() {
-                path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
-                goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
-                obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
+                if ui.button("Reset weights").clicked() {
+                    path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
+                    goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
+                    obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
+                }
+
+                if ui.button("Rerun").clicked() {
+                    let mut is_run = res_nav.is_run.lock();
+                    *is_run = true;
+                }
+
+                weight.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
+                weight.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
+                weight.insert(
+                    OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
+                    obstacle_weight as f64,
+                );
             }
 
-            if ui.button("Rerun").clicked() {
-                let mut is_run = res_nav.is_run.lock();
-                *is_run = true;
-            }
+            ui.separator();
 
-            let mut weights = res_nav.weights.lock();
-            weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
-            weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
-            weights.insert(
-                OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
-                obstacle_weight as f64,
-            );
+            if ui.button("Reload planner config").clicked() {
+                let mut planner = res_nav.planner.lock();
+                planner.update_param_from_config(format!(
+                    "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+                    env!("CARGO_MANIFEST_DIR")
+                ));
+            }
         });
 }
