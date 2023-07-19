@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[build-dependencies]
+tonic-build = "0.9"
+
 [dependencies]
 bevy = "0.10"
 bevy_egui = "0.20"
@@ -13,7 +16,12 @@ nalgebra = "0.32"
 parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
 openrr-nav = { path = "../openrr-nav" }
+prost = "0.11"
+prost-types = "0.11"
+tonic = "0.9"
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 rand = "0.8"
 rrt = "0.7"
+anyhow = "1"

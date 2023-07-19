@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package openrr_nav_viewer;
+
+import "google/protobuf/empty.proto";
+
+service Api {
+  rpc GetStartPosition(google.protobuf.Empty) returns (Position);
+  rpc GetGoalPosition(google.protobuf.Empty) returns (Position);
+  rpc GetWeights(google.protobuf.Empty) returns (WeightsResponse);
+  rpc GetLayeredGridMap(GetLayeredGridMapRequest) returns (LayeredGridMap);
+  rpc GetIsRun(google.protobuf.Empty) returns (IsRun);
+  rpc SetGlobalPath(RobotPath) returns (google.protobuf.Empty);
+  rpc SetLocalPathAndCandidates(PathAndCandidates) returns (google.protobuf.Empty);
+  rpc SetLayeredGridMap(SetLayeredGridMapRequest) returns (google.protobuf.Empty);
+  rpc SetCurrentPose(Isometry2) returns (google.protobuf.Empty);
+  rpc SetIsRun(IsRun) returns (google.protobuf.Empty);
+}
+
+message Position {
+  double x = 1;
+  double y = 2;
+}
+
+message WeightsResponse {
+  map<string, double> weights = 1;
+}
+
+message GetLayeredGridMapRequest {
+  repeated string names = 1;
+}
+
+message SetLayeredGridMapRequest {
+  repeated NamedGridMap maps = 1;
+}
+
+message NamedGridMap {
+  string name = 1;
+  GridMap map = 2;
+}
+
+message LayeredGridMap {
+  map<string, GridMap> maps = 1;
+}
+
+message GridMap {
+  GridPositionConverter grid_converter = 1;
+  repeated Cell cells = 2;
+}
+
+message GridPositionConverter {
+  double resolution = 1;
+  Position min_point = 2;
+  Position max_point = 3;
+  Size size = 4;
+}
+
+message Size {
+  uint32 width = 1;
+  uint32 height = 2;
+}
+
+message Cell {
+  oneof Kind {
+    google.protobuf.Empty uninitialized = 1;
+    google.protobuf.Empty unknown = 2;
+    google.protobuf.Empty obstacle = 3;
+    // proto doesn't have uint8
+    uint32 value = 4;
+  }
+}
+
+message IsRun {
+  bool is_run = 1;
+}
+
+message RobotPath {
+  repeated Isometry2 path = 1;
+}
+
+message PathAndCandidates {
+  RobotPath path = 1;
+  repeated Plan candidates = 2;
+}
+
+message Plan {
+  Velocity velocity = 1;
+  double cost = 2;
+  repeated Isometry2 path = 3;
+}
+
+message Velocity {
+  double x = 1;
+  double theta = 2;
+}
+
+message Isometry2 {
+  UnitComplex rotation = 1;
+  Translation2 translation = 2;
+}
+
+message UnitComplex {
+  double re = 1;
+  double im = 2;
+}
+
+message Translation2 {
+  double x = 1;
+  double y = 2;
+}
