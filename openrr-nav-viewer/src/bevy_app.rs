@@ -212,7 +212,7 @@ fn ui_system(
 
             {
                 let mut planner = res_nav.planner.lock();
-                let weight = planner.get_map_name_weight_mut();
+                let weight = planner.map_name_weight_mut();
                 let mut path_weight = weight.get(PATH_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
                 ui.horizontal(|h_ui| {
                     h_ui.add_sized([100.0, 30.0], egui::Label::new("path weight"));
@@ -283,10 +283,12 @@ fn ui_system(
                 .clicked()
             {
                 let mut planner = res_nav.planner.lock();
-                planner.update_param_from_config(format!(
-                    "{}/../openrr-nav/config/dwa_parameter_config.yaml",
-                    env!("CARGO_MANIFEST_DIR")
-                ));
+                planner
+                    .update_params_from_config(format!(
+                        "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+                        env!("CARGO_MANIFEST_DIR")
+                    ))
+                    .unwrap();
             }
         });
 }

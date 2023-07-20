@@ -65,7 +65,7 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
 
 pub fn local_goal_distance_map(
     map: &GridMap<u8>,
-    global_path: Vec<Vec<f64>>,
+    global_path: &[Vec<f64>],
     current_pose: [f64; 2],
 ) -> Result<GridMap<u8>> {
     let len = global_path.len();

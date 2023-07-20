@@ -1,4 +1,4 @@
-DWAPlanner:
+DwaPlanner:
   limits:
     max_velocity: [0.5, 2.0]
     max_acceleration: [2.0, 5.0]

@@ -68,7 +68,7 @@ fn main() {
 
     {
         let mut locked_planner = cloned_nav.planner.lock();
-        *locked_planner = planner;
+        *locked_planner = planner.unwrap();
     }
 
     std::thread::spawn(move || loop {
@@ -125,8 +125,7 @@ fn main() {
 
             let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
-            let local_goal_disrance_map =
-                local_goal_distance_map(&map, result.clone(), start).unwrap();
+            let local_goal_disrance_map = local_goal_distance_map(&map, &result, start).unwrap();
 
             {
                 let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
@@ -163,7 +162,7 @@ fn main() {
 
                 let local_goal_disrance_map = openrr_nav::local_goal_distance_map(
                     &map,
-                    result.clone(),
+                    &result,
                     [current_pose.translation.x, current_pose.translation.y],
                 )
                 .unwrap();

@@ -3,6 +3,8 @@ pub use na::Vector2;
 use nalgebra as na;
 use std::{collections::HashMap, fs, path::Path};
 
+use crate::Error;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Velocity {
     pub x: f64,
@@ -97,10 +99,10 @@ impl DwaPlanner {
         }
     }
 
-    pub fn new_from_config(path: impl AsRef<Path>) -> Self {
+    pub fn new_from_config(path: impl AsRef<Path>) -> Result<Self, Error> {
         let source = fs::read_to_string(path).unwrap();
         let yaml_config = yaml_rust::YamlLoader::load_from_str(&source).unwrap();
-        let config = &yaml_config[0]["DWAPlanner"];
+        let config = &yaml_config[0]["DwaPlanner"];
 
         let max_vel = &config["limits"]["max_velocity"].as_vec().unwrap();
         let max_acc = &config["limits"]["max_acceleration"].as_vec().unwrap();
@@ -116,7 +118,7 @@ impl DwaPlanner {
             );
         }
 
-        Self {
+        Ok(Self {
             limits: Limits {
                 max_velocity: Velocity {
                     x: max_vel[0].as_f64().unwrap(),
@@ -139,50 +141,12 @@ impl DwaPlanner {
             controller_dt: *(&config["controller_dt"].as_f64().unwrap()),
             simulation_duration: *(&config["simulation_duration"].as_f64().unwrap()),
             num_vel_sample: *(&config["num_vel_sample"].as_i64().unwrap()) as i32,
-        }
+        })
     }
 
-    pub fn update_param_from_config(&mut self, path: impl AsRef<Path>) {
-        let source = fs::read_to_string(path).unwrap();
-        let yaml_config = yaml_rust::YamlLoader::load_from_str(&source).unwrap();
-        let config = &yaml_config[0]["DWAPlanner"];
-
-        let max_vel = &config["limits"]["max_velocity"].as_vec().unwrap();
-        let max_acc = &config["limits"]["max_acceleration"].as_vec().unwrap();
-        let min_vel = &config["limits"]["min_velocity"].as_vec().unwrap();
-        let min_acc = &config["limits"]["min_acceleration"].as_vec().unwrap();
-
-        let map_name_weight_from_config = &config["map_name_weight"].as_vec().unwrap();
-        let mut map_name_weight = HashMap::new();
-        for m in map_name_weight_from_config.iter() {
-            map_name_weight.insert(
-                m["name"].as_str().unwrap().to_owned(),
-                m["value"].as_f64().unwrap().to_owned(),
-            );
-        }
-
-        self.limits = Limits {
-            max_velocity: Velocity {
-                x: max_vel[0].as_f64().unwrap(),
-                theta: max_vel[1].as_f64().unwrap(),
-            },
-            max_accel: Acceleration {
-                x: max_acc[0].as_f64().unwrap(),
-                theta: max_acc[1].as_f64().unwrap(),
-            },
-            min_velocity: Velocity {
-                x: min_vel[0].as_f64().unwrap(),
-                theta: min_vel[1].as_f64().unwrap(),
-            },
-            min_accel: Acceleration {
-                x: min_acc[0].as_f64().unwrap(),
-                theta: min_acc[1].as_f64().unwrap(),
-            },
-        };
-        self.map_name_weight = map_name_weight;
-        self.controller_dt = *(&config["controller_dt"].as_f64().unwrap());
-        self.simulation_duration = *(&config["simulation_duration"].as_f64().unwrap());
-        self.num_vel_sample = *(&config["num_vel_sample"].as_i64().unwrap()) as i32;
+    pub fn update_params_from_config(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
+        *self = Self::new_from_config(path)?;
+        Ok(())
     }
 
     /// Get candidate velocities from current velocity
@@ -279,11 +243,11 @@ impl DwaPlanner {
         selected_plan
     }
 
-    pub fn get_map_name_weight(&self) -> HashMap<String, f64> {
-        self.map_name_weight.clone()
+    pub fn map_name_weight(&self) -> &HashMap<String, f64> {
+        &self.map_name_weight
     }
 
-    pub fn get_map_name_weight_mut(&mut self) -> &mut HashMap<String, f64> {
+    pub fn map_name_weight_mut(&mut self) -> &mut HashMap<String, f64> {
         &mut self.map_name_weight
     }
 }
