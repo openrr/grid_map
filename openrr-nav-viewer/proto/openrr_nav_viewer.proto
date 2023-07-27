@@ -29,13 +29,9 @@ message Limits {
   Acceleration min_accel = 4;
 }
 
-message WeightsResponse {
-  map<string, double> weights = 1;
-}
-
 message DwaPlanner {
   Limits limits = 1;
-  WeightsResponse map_name_weight = 2;
+  map<string, double> map_name_weight = 2;
   double controller_dt = 3;
   double simulation_duration = 4;
   int32 num_vel_sample = 5;

@@ -37,9 +37,7 @@ impl pb::api_server::Api for NavigationViz {
         let planner = self.planner.lock().clone();
         Ok(tonic::Response::new(pb::DwaPlanner {
             limits: Some(planner.limits().clone().into()),
-            map_name_weight: Some(pb::WeightsResponse {
-                weights: planner.map_name_weight().clone(),
-            }),
+            map_name_weight: planner.map_name_weight().clone(),
             controller_dt: planner.controller_dt(),
             simulation_duration: planner.simulation_duration(),
             num_vel_sample: planner.num_vel_sample(),

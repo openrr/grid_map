@@ -153,7 +153,7 @@ async fn controller(
     let planner = api.get_planner(()).await?.into_inner();
     let planner = DwaPlanner::new(
         planner.limits.unwrap().into(),
-        planner.map_name_weight.unwrap().weights,
+        planner.map_name_weight,
         planner.controller_dt,
         planner.simulation_duration,
         planner.num_vel_sample,
