@@ -30,12 +30,19 @@ impl pb::api_server::Api for NavigationViz {
         let goal = self.goal_position.lock();
         Ok(tonic::Response::new((*goal).into()))
     }
-    async fn get_weights(
+    async fn get_planner(
         &self,
         _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<pb::WeightsResponse>, tonic::Status> {
-        Ok(tonic::Response::new(pb::WeightsResponse {
-            weights: self.weights.lock().clone(),
+    ) -> Result<tonic::Response<pb::DwaPlanner>, tonic::Status> {
+        let planner = self.planner.lock().clone();
+        Ok(tonic::Response::new(pb::DwaPlanner {
+            limits: Some(planner.limits().clone().into()),
+            map_name_weight: Some(pb::WeightsResponse {
+                weights: planner.map_name_weight().clone(),
+            }),
+            controller_dt: planner.controller_dt(),
+            simulation_duration: planner.simulation_duration(),
+            num_vel_sample: planner.num_vel_sample(),
         }))
     }
     async fn get_layered_grid_map(
@@ -139,6 +146,61 @@ impl From<grid_map::Position> for pb::Position {
 impl From<pb::Position> for grid_map::Position {
     fn from(val: pb::Position) -> Self {
         Self { x: val.x, y: val.y }
+    }
+}
+
+impl From<pb::Velocity> for openrr_nav::Velocity {
+    fn from(value: pb::Velocity) -> Self {
+        Self {
+            x: value.x,
+            theta: value.theta,
+        }
+    }
+}
+impl From<openrr_nav::Velocity> for pb::Velocity {
+    fn from(value: openrr_nav::Velocity) -> Self {
+        Self {
+            x: value.x,
+            theta: value.theta,
+        }
+    }
+}
+
+impl From<pb::Acceleration> for openrr_nav::Acceleration {
+    fn from(value: pb::Acceleration) -> Self {
+        Self {
+            x: value.x,
+            theta: value.theta,
+        }
+    }
+}
+impl From<openrr_nav::Acceleration> for pb::Acceleration {
+    fn from(value: openrr_nav::Acceleration) -> Self {
+        Self {
+            x: value.x,
+            theta: value.theta,
+        }
+    }
+}
+
+impl From<pb::Limits> for openrr_nav::Limits {
+    fn from(value: pb::Limits) -> Self {
+        Self {
+            max_velocity: value.max_velocity.unwrap().into(),
+            max_accel: value.max_accel.unwrap().into(),
+            min_velocity: value.min_velocity.unwrap().into(),
+            min_accel: value.min_accel.unwrap().into(),
+        }
+    }
+}
+impl From<openrr_nav::Limits> for pb::Limits {
+    fn from(value: openrr_nav::Limits) -> Self {
+        Self {
+            max_velocity: Some(value.max_velocity.into()),
+            max_accel: Some(value.max_accel.into()),
+            min_velocity: Some(value.min_velocity.into()),
+            min_accel: Some(value.min_accel.into()),
+        }
     }
 }
 

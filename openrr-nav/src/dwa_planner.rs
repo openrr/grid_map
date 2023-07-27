@@ -243,6 +243,10 @@ impl DwaPlanner {
         selected_plan
     }
 
+    pub fn limits(&self) -> &Limits {
+        &self.limits
+    }
+
     pub fn map_name_weight(&self) -> &HashMap<String, f64> {
         &self.map_name_weight
     }
@@ -253,6 +257,18 @@ impl DwaPlanner {
 
     pub fn map_names(&self) -> impl Iterator<Item = &String> {
         self.map_name_weight.keys()
+    }
+
+    pub fn controller_dt(&self) -> f64 {
+        self.controller_dt
+    }
+
+    pub fn simulation_duration(&self) -> f64 {
+        self.simulation_duration
+    }
+
+    pub fn num_vel_sample(&self) -> i32 {
+        self.num_vel_sample
     }
 }
 
