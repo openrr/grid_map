@@ -150,25 +150,13 @@ async fn controller(
         ],
     })
     .await?;
-    let weights = api.get_weights(()).await?.into_inner().weights;
-
+    let planner = api.get_planner(()).await?.into_inner();
     let planner = DwaPlanner::new(
-        Limits {
-            max_velocity: Velocity { x: 0.5, theta: 2.0 },
-            max_accel: Acceleration { x: 2.0, theta: 5.0 },
-            min_velocity: Velocity {
-                x: 0.0,
-                theta: -2.0,
-            },
-            min_accel: Acceleration {
-                x: -2.0,
-                theta: -5.0,
-            },
-        },
-        weights,
-        0.1,
-        1.0,
-        5,
+        planner.limits.unwrap().into(),
+        planner.map_name_weight,
+        planner.controller_dt,
+        planner.simulation_duration,
+        planner.num_vel_sample,
     );
 
     let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
