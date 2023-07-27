@@ -10,9 +10,12 @@ use crate::*;
 pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
+pub const LOCAL_GOAL_DISTANCE_MAP_NAME: &str = "local_goal";
+
 pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
 pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
 pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
+pub const DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT: f64 = 0.2;
 
 #[derive(Debug, Resource)]
 pub struct UiCheckboxes {
@@ -103,6 +106,13 @@ fn update_system(
                         }
                     }
                 }
+                MapType::LocalGoalDisranceMap => {
+                    if let Some(dist_map) = map.layer(LOCAL_GOAL_DISTANCE_MAP_NAME) {
+                        for p in grid_map_to_polygon(dist_map) {
+                            plot_ui.polygon(p);
+                        }
+                    }
+                }
             }
 
             // Plot path
@@ -156,77 +166,129 @@ fn ui_system(
 
     egui::SidePanel::left("left_side_panel")
         .default_width(200.)
+        .min_width(200.)
         .show(ctx, |ui| {
             ui.radio_value(map_type.as_mut(), MapType::PathDistanceMap, "Path");
             ui.radio_value(map_type.as_mut(), MapType::GoalDistanceMap, "Goal");
             ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
-
-            ui.horizontal(|h_ui| {
-                if h_ui.button("Set Start").clicked() {
-                    ui_checkboxes.set_start = !ui_checkboxes.set_start;
-                    ui_checkboxes.set_goal = false;
-                }
-                if h_ui.button("Set Goal").clicked() {
-                    ui_checkboxes.set_goal = !ui_checkboxes.set_goal;
-                    ui_checkboxes.set_start = false;
-                }
-            });
-            ui.label(if ui_checkboxes.set_start {
-                "Set start  "
-            } else if ui_checkboxes.set_goal {
-                "Set goal   "
-            } else {
-                "Choose mode"
-            });
-
-            let mut path_weight = res_nav
-                .weights
-                .lock()
-                .get(PATH_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("path weight");
-                h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
-            });
-            let mut goal_weight = res_nav
-                .weights
-                .lock()
-                .get(GOAL_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("goal weight");
-                h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
-            });
-            let mut obstacle_weight = res_nav
-                .weights
-                .lock()
-                .get(OBSTACLE_DISTANCE_MAP_NAME)
-                .unwrap()
-                .to_owned() as f32;
-            ui.horizontal(|h_ui| {
-                h_ui.label("obstacle weight");
-                h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
-            });
-
-            if ui.button("Reset weights").clicked() {
-                path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
-                goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
-                obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
-            }
-
-            if ui.button("Rerun").clicked() {
-                let mut is_run = res_nav.is_run.lock();
-                *is_run = true;
-            }
-
-            let mut weights = res_nav.weights.lock();
-            weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
-            weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
-            weights.insert(
-                OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
-                obstacle_weight as f64,
+            ui.radio_value(
+                map_type.as_mut(),
+                MapType::LocalGoalDisranceMap,
+                "Local Goal",
             );
+            ui.label("");
+            ui.separator();
+            ui.label("");
+
+            ui.horizontal(|h_ui| {
+                h_ui.columns(2, |c_ui| {
+                    if c_ui[0]
+                        .add_sized([Default::default(), 30.], egui::Button::new("Set Start"))
+                        .clicked()
+                    {
+                        ui_checkboxes.set_start = !ui_checkboxes.set_start;
+                        ui_checkboxes.set_goal = false;
+                    }
+                    if c_ui[1]
+                        .add_sized([Default::default(), 30.], egui::Button::new("Set Goal"))
+                        .clicked()
+                    {
+                        ui_checkboxes.set_goal = !ui_checkboxes.set_goal;
+                        ui_checkboxes.set_start = false;
+                    }
+                });
+            });
+            ui.colored_label(
+                egui::Color32::RED,
+                if ui_checkboxes.set_start {
+                    "Set start  "
+                } else if ui_checkboxes.set_goal {
+                    "Set goal   "
+                } else {
+                    "Choose mode"
+                },
+            );
+            ui.label("");
+
+            {
+                let mut planner = res_nav.planner.lock();
+                let weight = planner.map_name_weight_mut();
+                let mut path_weight = weight.get(PATH_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("path weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut path_weight, 0.0..=1.0));
+                });
+                let mut goal_weight = weight.get(GOAL_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("goal weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut goal_weight, 0.0..=1.0));
+                });
+                let mut obstacle_weight =
+                    weight.get(OBSTACLE_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("obstacle weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut obstacle_weight, 0.0..=1.0));
+                });
+                let mut local_goal_weight =
+                    weight.get(LOCAL_GOAL_DISTANCE_MAP_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("local goal weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut local_goal_weight, 0.0..=1.0));
+                });
+                ui.label("");
+
+                ui.horizontal(|h_ui| {
+                    if h_ui
+                        .add_sized([200., 30.], egui::Button::new("Reset weights"))
+                        .clicked()
+                    {
+                        path_weight = DEFAULT_PATH_DISTANCE_WEIGHT as f32;
+                        goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
+                        obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
+                        local_goal_weight = DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT as f32;
+                    }
+                });
+
+                ui.horizontal(|h_ui| {
+                    if h_ui
+                        .add_sized([200., 30.], egui::Button::new("Rerun"))
+                        .clicked()
+                    {
+                        let mut is_run = res_nav.is_run.lock();
+                        *is_run = true;
+                    }
+                });
+
+                weight.insert(PATH_DISTANCE_MAP_NAME.to_owned(), path_weight as f64);
+                weight.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_weight as f64);
+                weight.insert(
+                    OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
+                    obstacle_weight as f64,
+                );
+                weight.insert(
+                    LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                    local_goal_weight as f64,
+                );
+            }
+            ui.label("");
+            ui.separator();
+            ui.label("");
+
+            if ui
+                .add_sized([200., 30.], egui::Button::new("Reload planner config"))
+                .clicked()
+            {
+                let mut planner = res_nav.planner.lock();
+                planner
+                    .update_params_from_config(format!(
+                        "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+                        env!("CARGO_MANIFEST_DIR")
+                    ))
+                    .unwrap();
+            }
         });
 }

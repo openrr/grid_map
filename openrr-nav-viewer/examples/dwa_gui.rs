@@ -6,11 +6,12 @@ use rand::distributions::{Distribution, Uniform};
 
 fn new_sample_map() -> GridMap<u8> {
     let mut map =
-        grid_map::GridMap::<u8>::new(Position::new(-1.05, -1.05), Position::new(3.05, 1.05), 0.05);
-    for i in 10..50 {
-        map.set_obstacle(&Grid::new(i + 10, 5)).unwrap();
-        map.set_obstacle(&Grid::new(i + 10, 6)).unwrap();
-        for j in 20..30 {
+        grid_map::GridMap::<u8>::new(Position::new(-2.05, -2.05), Position::new(6.05, 2.05), 0.05);
+    for i in 20..100 {
+        for j in 10..14 {
+            map.set_obstacle(&Grid::new(i + 20, j)).unwrap();
+        }
+        for j in 40..60 {
             map.set_obstacle(&Grid::new(i, j)).unwrap();
         }
     }
@@ -60,6 +61,16 @@ fn main() {
 
     let cloned_nav = nav.clone();
 
+    let planner = DwaPlanner::new_from_config(format!(
+        "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+        env!("CARGO_MANIFEST_DIR")
+    ));
+
+    {
+        let mut locked_planner = cloned_nav.planner.lock();
+        *locked_planner = planner.unwrap();
+    }
+
     std::thread::spawn(move || loop {
         if cloned_nav.is_run.lock().to_owned() {
             let mut map = new_sample_map();
@@ -88,8 +99,8 @@ fn main() {
                     let mut rng = rand::thread_rng();
                     vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
                 },
-                0.05,
-                1000,
+                EXTEND_LENGTH,
+                4000,
             )
             .unwrap();
             rrt::smooth_path(&mut result, is_free, EXTEND_LENGTH, 1000);
@@ -103,7 +114,7 @@ fn main() {
                 .map(|p| map.to_grid(p[0], p[1]).unwrap())
                 .collect::<Vec<_>>();
 
-            for p in result {
+            for p in result.iter() {
                 map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
             }
 
@@ -114,6 +125,8 @@ fn main() {
 
             let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
+            let local_goal_disrance_map = local_goal_distance_map(&map, &result, start).unwrap();
+
             {
                 let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
                 locked_layered_grid_map
@@ -122,31 +135,11 @@ fn main() {
                     .add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
                 locked_layered_grid_map
                     .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
+                locked_layered_grid_map.add_layer(
+                    LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                    local_goal_disrance_map,
+                );
             }
-            let weights;
-            {
-                let locked_weights = cloned_nav.weights.lock();
-                weights = locked_weights.clone();
-            }
-
-            let planner = DwaPlanner::new(
-                Limits {
-                    max_velocity: Velocity { x: 0.5, theta: 2.0 },
-                    max_accel: Acceleration { x: 2.0, theta: 5.0 },
-                    min_velocity: Velocity {
-                        x: 0.0,
-                        theta: -2.0,
-                    },
-                    min_accel: Acceleration {
-                        x: -2.0,
-                        theta: -5.0,
-                    },
-                },
-                weights,
-                0.1,
-                1.0,
-                5,
-            );
 
             let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
             let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
@@ -154,16 +147,49 @@ fn main() {
             let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
             let mut plan_map = map.clone();
 
-            for i in 0..100 {
+            for i in 0..300 {
+                // let dynamic_map = new_dynamic_sample_map(i);
+                let dynamic_map = new_sample_map();
+                let path_distance_map =
+                    openrr_nav::path_distance_map(&dynamic_map, &path_grid).unwrap();
+
+                let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
+                let goal_distance_map =
+                    openrr_nav::goal_distance_map(&dynamic_map, &goal_grid).unwrap();
+
+                let obstacle_distance_map =
+                    openrr_nav::obstacle_distance_map(&dynamic_map).unwrap();
+
+                let local_goal_disrance_map = openrr_nav::local_goal_distance_map(
+                    &map,
+                    &result,
+                    [current_pose.translation.x, current_pose.translation.y],
+                )
+                .unwrap();
+
+                {
+                    let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                    locked_layered_grid_map
+                        .add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
+                    locked_layered_grid_map
+                        .add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
+                    locked_layered_grid_map
+                        .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
+                    locked_layered_grid_map.add_layer(
+                        LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                        local_goal_disrance_map,
+                    );
+                }
                 let (plan, candidates) = {
                     let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                    let locked_planner = cloned_nav.planner.lock();
                     (
-                        planner.plan_local_path(
+                        locked_planner.plan_local_path(
                             &current_pose,
                             &current_velocity,
                             &locked_layered_grid_map,
                         ),
-                        planner.predicted_plan_candidates(&current_pose, &current_velocity),
+                        locked_planner.predicted_plan_candidates(&current_pose, &current_velocity),
                     )
                 };
                 {

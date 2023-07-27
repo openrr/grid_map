@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use grid_map::*;
 use openrr_nav::*;
 use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc};
-
-use crate::*;
+use std::sync::Arc;
 
 #[derive(Clone, Resource)]
 pub struct NavigationViz {
@@ -14,33 +12,19 @@ pub struct NavigationViz {
     pub is_run: Arc<Mutex<bool>>,
     pub start_position: Arc<Mutex<Position>>,
     pub goal_position: Arc<Mutex<Position>>,
-    pub weights: Arc<Mutex<HashMap<String, f64>>>,
+    pub planner: Arc<Mutex<DwaPlanner>>,
 }
 
 impl Default for NavigationViz {
     fn default() -> Self {
-        let mut weights = HashMap::new();
-        weights.insert(
-            PATH_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_PATH_DISTANCE_WEIGHT,
-        );
-        weights.insert(
-            GOAL_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_GOAL_DISTANCE_WEIGHT,
-        );
-        weights.insert(
-            OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
-            DEFAULT_OBSTACLE_DISTANCE_WEIGHT,
-        );
-
         Self {
             layered_grid_map: Default::default(),
             robot_path: Default::default(),
             robot_pose: Default::default(),
             is_run: Arc::new(Mutex::new(true)),
-            start_position: Arc::new(Mutex::new(Position::new(-0.8, -0.9))),
-            goal_position: Arc::new(Mutex::new(Position::new(2.5, 0.5))),
-            weights: Arc::new(Mutex::new(weights)),
+            start_position: Arc::new(Mutex::new(Position::new(-1.6, -1.8))),
+            goal_position: Arc::new(Mutex::new(Position::new(5.0, 1.0))),
+            planner: Arc::new(Mutex::new(DwaPlanner::default())),
         }
     }
 }

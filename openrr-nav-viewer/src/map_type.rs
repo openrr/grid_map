@@ -6,4 +6,5 @@ pub enum MapType {
     PathDistanceMap,
     GoalDistanceMap,
     ObstacleDistanceMap,
+    LocalGoalDisranceMap,
 }

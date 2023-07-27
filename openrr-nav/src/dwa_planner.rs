@@ -1,7 +1,9 @@
 use grid_map::{Cell, GridMap, LayeredGridMap, Position};
 pub use na::Vector2;
 use nalgebra as na;
-use std::collections::HashMap;
+use std::{collections::HashMap, fs, path::Path};
+
+use crate::Error;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Velocity {
@@ -97,6 +99,56 @@ impl DwaPlanner {
         }
     }
 
+    pub fn new_from_config(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let source = fs::read_to_string(path).unwrap();
+        let yaml_config = yaml_rust::YamlLoader::load_from_str(&source).unwrap();
+        let config = &yaml_config[0]["DwaPlanner"];
+
+        let max_vel = &config["limits"]["max_velocity"].as_vec().unwrap();
+        let max_acc = &config["limits"]["max_acceleration"].as_vec().unwrap();
+        let min_vel = &config["limits"]["min_velocity"].as_vec().unwrap();
+        let min_acc = &config["limits"]["min_acceleration"].as_vec().unwrap();
+
+        let map_name_weight_from_config = &config["map_name_weight"].as_vec().unwrap();
+        let mut map_name_weight = HashMap::new();
+        for m in map_name_weight_from_config.iter() {
+            map_name_weight.insert(
+                m["name"].as_str().unwrap().to_owned(),
+                m["value"].as_f64().unwrap().to_owned(),
+            );
+        }
+
+        Ok(Self {
+            limits: Limits {
+                max_velocity: Velocity {
+                    x: max_vel[0].as_f64().unwrap(),
+                    theta: max_vel[1].as_f64().unwrap(),
+                },
+                max_accel: Acceleration {
+                    x: max_acc[0].as_f64().unwrap(),
+                    theta: max_acc[1].as_f64().unwrap(),
+                },
+                min_velocity: Velocity {
+                    x: min_vel[0].as_f64().unwrap(),
+                    theta: min_vel[1].as_f64().unwrap(),
+                },
+                min_accel: Acceleration {
+                    x: min_acc[0].as_f64().unwrap(),
+                    theta: min_acc[1].as_f64().unwrap(),
+                },
+            },
+            map_name_weight,
+            controller_dt: *(&config["controller_dt"].as_f64().unwrap()),
+            simulation_duration: *(&config["simulation_duration"].as_f64().unwrap()),
+            num_vel_sample: *(&config["num_vel_sample"].as_i64().unwrap()) as i32,
+        })
+    }
+
+    pub fn update_params_from_config(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
+        *self = Self::new_from_config(path)?;
+        Ok(())
+    }
+
     /// Get candidate velocities from current velocity
     pub(crate) fn sample_velocity(&self, current_velocity: &Velocity) -> Vec<Velocity> {
         let max_x_limit = (current_velocity.x + self.limits.max_accel.x * self.controller_dt)
@@ -189,6 +241,14 @@ impl DwaPlanner {
         }
         selected_plan.cost = min_cost;
         selected_plan
+    }
+
+    pub fn map_name_weight(&self) -> &HashMap<String, f64> {
+        &self.map_name_weight
+    }
+
+    pub fn map_name_weight_mut(&mut self) -> &mut HashMap<String, f64> {
+        &mut self.map_name_weight
     }
 
     pub fn map_names(&self) -> impl Iterator<Item = &String> {
