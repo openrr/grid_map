@@ -250,6 +250,10 @@ impl DwaPlanner {
     pub fn map_name_weight_mut(&mut self) -> &mut HashMap<String, f64> {
         &mut self.map_name_weight
     }
+
+    pub fn map_names(&self) -> impl Iterator<Item = &String> {
+        self.map_name_weight.keys()
+    }
 }
 
 #[cfg(test)]
