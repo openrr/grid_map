@@ -6,6 +6,8 @@
 // cargo run -p openrr-nav-viewer --example controller
 // ```
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use grid_map::*;
 use nalgebra as na;
@@ -165,6 +167,10 @@ async fn controller(
     let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
     let mut plan_map = map.clone();
 
+    let angles = HashMap::new();
+    let angle_space = AngleSpace::new(angles);
+    // TODO: Add angles
+
     for i in 0..100 {
         let (plan, candidates) = {
             let layered_grid_map = api
@@ -182,6 +188,7 @@ async fn controller(
                     &current_pose,
                     &current_velocity,
                     &LayeredGridMap::new(layered_grid_map),
+                    &angle_space,
                 ),
                 planner.predicted_plan_candidates(&current_pose, &current_velocity),
             )
