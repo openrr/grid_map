@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::{
     egui::{
         self,
-        plot::{Line, Plot, PlotPoints},
+        plot::{Line, Plot, PlotPoints, Polygon},
         Color32,
     },
     EguiContexts, EguiPlugin,
@@ -104,7 +104,8 @@ impl BevyAppNav {
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
             .add_system(ui_system)
-            .add_system(update_system);
+            .add_system(update_system)
+            .add_system(bottom_monitor_system);
     }
 
     pub fn run(&mut self) {
@@ -406,5 +407,51 @@ fn ui_system(
                     ))
                     .unwrap();
             }
+        });
+}
+
+fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>) {
+    let ctx = contexts.ctx_mut();
+
+    egui::TopBottomPanel::bottom("monitor")
+        .default_height(150.)
+        .show(ctx, |ui| {
+            let angle_table = res_nav.angle_space.lock().get_as_tuple();
+
+            ui.columns(angle_table.len(), |c_ui| {
+                let mut circle_points = vec![];
+                let num = 20;
+                for i in 0..num {
+                    let theta = i as f64 / num as f64 * 2. * std::f64::consts::PI;
+                    circle_points.push([theta.cos(), theta.sin()]);
+                }
+
+                for (i, (name, angle)) in angle_table.iter().enumerate() {
+                    c_ui[i].label(name);
+                    Plot::new(format!("angle{}", i))
+                        .data_aspect(1.)
+                        .auto_bounds_x()
+                        .auto_bounds_y()
+                        .allow_drag(false)
+                        .allow_scroll(false)
+                        .allow_zoom(false)
+                        .allow_boxed_zoom(false)
+                        .allow_double_click_reset(false)
+                        .show_axes([false, false])
+                        .show_background(false)
+                        .show(&mut c_ui[i], |plot_ui| {
+                            plot_ui.polygon(
+                                Polygon::new(PlotPoints::new(circle_points.clone()))
+                                    .color(Color32::WHITE)
+                                    .width(2.),
+                            );
+                            plot_ui.line(
+                                Line::new(vec![[0., 0.], [angle.cos(), angle.sin()]])
+                                    .color(Color32::RED)
+                                    .width(3.),
+                            );
+                        });
+                }
+            });
         });
 }
