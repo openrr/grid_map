@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use grid_map::*;
 use openrr_nav::*;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone, Resource)]
 pub struct NavigationViz {
     pub layered_grid_map: Arc<Mutex<LayeredGridMap<u8>>>,
-    pub angle_space: Arc<Mutex<AngleSpace>>,
+    pub angle_table: Arc<Mutex<HashMap<String, f64>>>,
     pub robot_path: Arc<Mutex<NavigationRobotPath>>,
     pub robot_pose: Arc<Mutex<Pose>>,
     pub is_run: Arc<Mutex<bool>>,
@@ -20,7 +20,7 @@ impl Default for NavigationViz {
     fn default() -> Self {
         Self {
             layered_grid_map: Default::default(),
-            angle_space: Default::default(),
+            angle_table: Default::default(),
             robot_path: Default::default(),
             robot_pose: Default::default(),
             is_run: Arc::new(Mutex::new(true)),

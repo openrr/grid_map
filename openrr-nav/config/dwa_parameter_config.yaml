@@ -14,9 +14,11 @@ DwaPlanner:
     - name: local_goal
       value: 0.8
     - name: rotation
-      value: 0.0
+      value: 0.1
+    - name: path_direction
+      value: 0.1
     - name: goal_direction
-      value: 0.2
+      value: 0.01
   controller_dt: 0.1
   simulation_duration: 1.0
   num_vel_sample: 5

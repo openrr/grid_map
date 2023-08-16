@@ -3,7 +3,7 @@ pub use na::Vector2;
 use nalgebra as na;
 use std::{collections::HashMap, fs, path::Path};
 
-use crate::{AngleSpace, Error};
+use crate::Error;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Velocity {
@@ -217,7 +217,7 @@ impl DwaPlanner {
         current_pose: &Pose,
         current_velocity: &Velocity,
         maps: &LayeredGridMap<u8>,
-        angles: &AngleSpace,
+        angles: &HashMap<String, f64>,
     ) -> Plan {
         let plans = self.predicted_plan_candidates(current_pose, current_velocity);
         let mut min_cost = f64::MAX;
@@ -240,7 +240,7 @@ impl DwaPlanner {
                 };
                 all_layer_cost += dist_cost;
 
-                let angle_cost = match angles.space(cost_name) {
+                let angle_cost = match angles.get(cost_name) {
                     Some(angle) => v * (angle - plan.path.last().unwrap().rotation.angle()).abs(),
                     None => 0.,
                 };
@@ -365,8 +365,6 @@ mod tests {
         maps.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
         let layered = LayeredGridMap::new(maps);
         let angles = HashMap::new();
-        let angle_space = AngleSpace::new(angles);
-        // TODO: Add angles
         let mut weights = HashMap::new();
         weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
         weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
@@ -398,7 +396,7 @@ mod tests {
         let mut reached = false;
         for i in 0..100 {
             let plan =
-                planner.plan_local_path(&current_pose, &current_velocity, &layered, &angle_space);
+                planner.plan_local_path(&current_pose, &current_velocity, &layered, &angles);
             println!("vel = {:?} cost = {}", current_velocity, plan.cost);
             println!(
                 "pose = {:?}, {}",

@@ -17,14 +17,16 @@ pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
 pub const LOCAL_GOAL_DISTANCE_MAP_NAME: &str = "local_goal";
 pub const ROTATION_COST_NAME: &str = "rotation";
+pub const PATH_DIRECTION_COST_NAME: &str = "path_direction";
 pub const GOAL_DIRECTION_COST_NAME: &str = "goal_direction";
 
 pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
 pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.1;
 pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
 pub const DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT: f64 = 0.8;
-pub const DEFAULT_ROTATION_COST_WEIGHT: f64 = 0.01;
-pub const DEFAULT_GOAL_DIRECTION_COST_WEIGHT: f64 = 0.2;
+pub const DEFAULT_ROTATION_COST_WEIGHT: f64 = 0.1;
+pub const DEFAULT_PATH_DIRECTION_COST_WEIGHT: f64 = 0.1;
+pub const DEFAULT_GOAL_DIRECTION_COST_WEIGHT: f64 = 0.01;
 
 #[derive(Debug, Resource)]
 pub struct UiCheckboxes {
@@ -339,6 +341,16 @@ fn ui_system(
                     h_ui.spacing_mut().slider_width = 250.;
                     h_ui.add(egui::Slider::new(&mut rotation_cost_weight, 0.0..=1.0));
                 });
+                let mut path_direction_cost_weight =
+                    weight.get(PATH_DIRECTION_COST_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("path direction weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(
+                        &mut path_direction_cost_weight,
+                        0.0..=1.0,
+                    ));
+                });
                 let mut goal_direction_cost_weight =
                     weight.get(GOAL_DIRECTION_COST_NAME).unwrap().to_owned() as f32;
                 ui.horizontal(|h_ui| {
@@ -361,6 +373,7 @@ fn ui_system(
                         obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
                         local_goal_weight = DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT as f32;
                         rotation_cost_weight = DEFAULT_ROTATION_COST_WEIGHT as f32;
+                        path_direction_cost_weight = DEFAULT_PATH_DIRECTION_COST_WEIGHT as f32;
                         goal_direction_cost_weight = DEFAULT_GOAL_DIRECTION_COST_WEIGHT as f32;
                     }
                 });
@@ -386,6 +399,10 @@ fn ui_system(
                     local_goal_weight as f64,
                 );
                 weight.insert(ROTATION_COST_NAME.to_owned(), rotation_cost_weight as f64);
+                weight.insert(
+                    PATH_DIRECTION_COST_NAME.to_owned(),
+                    path_direction_cost_weight as f64,
+                );
                 weight.insert(
                     GOAL_DIRECTION_COST_NAME.to_owned(),
                     goal_direction_cost_weight as f64,
@@ -416,7 +433,7 @@ fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>
     egui::TopBottomPanel::bottom("monitor")
         .default_height(150.)
         .show(ctx, |ui| {
-            let angle_table = res_nav.angle_space.lock().get_as_tuple();
+            let angle_table = res_nav.angle_table.lock();
 
             ui.columns(angle_table.len(), |c_ui| {
                 let mut circle_points = vec![];

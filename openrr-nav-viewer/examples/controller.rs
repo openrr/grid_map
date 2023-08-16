@@ -168,8 +168,6 @@ async fn controller(
     let mut plan_map = map.clone();
 
     let angles = HashMap::new();
-    let angle_space = AngleSpace::new(angles);
-    // TODO: Add angles
 
     for i in 0..100 {
         let (plan, candidates) = {
@@ -188,7 +186,7 @@ async fn controller(
                     &current_pose,
                     &current_velocity,
                     &LayeredGridMap::new(layered_grid_map),
-                    &angle_space,
+                    &angles,
                 ),
                 planner.predicted_plan_candidates(&current_pose, &current_velocity),
             )

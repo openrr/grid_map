@@ -69,8 +69,6 @@ fn main() {
     maps.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
     let layered = LayeredGridMap::new(maps);
     let angles = HashMap::new();
-    let angle_space = AngleSpace::new(angles);
-    // TODO: Add angles
     let mut weights = HashMap::new();
     weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
     weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
@@ -100,8 +98,7 @@ fn main() {
     let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
     let mut plan_map = map.clone();
     for i in 0..100 {
-        let plan =
-            planner.plan_local_path(&current_pose, &current_velocity, &layered, &angle_space);
+        let plan = planner.plan_local_path(&current_pose, &current_velocity, &layered, &angles);
         println!("vel = {:?} cost = {}", current_velocity, plan.cost);
         println!(
             "pose = {:?}, {}",

@@ -1,6 +1,6 @@
 use grid_map::*;
 use nalgebra as na;
-use openrr_nav::*;
+use openrr_nav::{utils::nearest_path_point, *};
 use openrr_nav_viewer::*;
 use rand::distributions::{Distribution, Uniform};
 
@@ -68,11 +68,19 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
 
 fn add_target_position_to_path(path: Vec<Vec<f64>>, target_pose: &Pose) -> Vec<Vec<f64>> {
     let mut p = path.clone();
-    p.push(vec![
+    let target_pose_vec = vec![
         target_pose.translation.x,
         target_pose.translation.y,
         target_pose.rotation.angle(),
-    ]);
+    ];
+    match p.last_mut() {
+        Some(v) => {
+            *v = target_pose_vec;
+        }
+        None => {
+            p.push(target_pose_vec);
+        }
+    }
     p
 }
 
@@ -175,9 +183,10 @@ fn main() {
             }
 
             {
-                let mut locked_angle_space = cloned_nav.angle_space.lock();
-                locked_angle_space.add_space(ROTATION_COST_NAME.to_owned(), start[2]);
-                locked_angle_space.add_space(GOAL_DIRECTION_COST_NAME.to_owned(), goal[2]);
+                let mut locked_angle_table = cloned_nav.angle_table.lock();
+                locked_angle_table.insert(ROTATION_COST_NAME.to_owned(), start[2]);
+                locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), start[2]);
+                locked_angle_table.insert(GOAL_DIRECTION_COST_NAME.to_owned(), goal[2]);
             }
 
             let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), start[2]);
@@ -221,21 +230,31 @@ fn main() {
                 }
 
                 {
-                    let mut locked_angle_space = cloned_nav.angle_space.lock();
-                    locked_angle_space
-                        .add_space(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
+                    let nearest_path_point = nearest_path_point(
+                        &result,
+                        [current_pose.translation.x, current_pose.translation.y],
+                    );
+                    let mut locked_angle_table = cloned_nav.angle_table.lock();
+                    locked_angle_table
+                        .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
+                    match nearest_path_point {
+                        Some(p) => {
+                            locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), p.1[2]);
+                        }
+                        None => {}
+                    }
                 }
 
                 let (plan, candidates) = {
                     let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
-                    let locked_angle_space = cloned_nav.angle_space.lock();
+                    let locked_angle_table = cloned_nav.angle_table.lock();
                     let locked_planner = cloned_nav.planner.lock();
                     (
                         locked_planner.plan_local_path(
                             &current_pose,
                             &current_velocity,
                             &locked_layered_grid_map,
-                            &locked_angle_space,
+                            &locked_angle_table,
                         ),
                         locked_planner.predicted_plan_candidates(&current_pose, &current_velocity),
                     )
