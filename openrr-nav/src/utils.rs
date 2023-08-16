@@ -22,17 +22,13 @@ pub fn show_ascii_map(map: &grid_map::GridMap<u8>, scale: f32) {
     }
 }
 
-pub fn nearest_path_point(
-    path: &[Vec<f64>],
-    target_point: [f64; 2],
-) -> Option<(usize, Vec<f64>)> {
+pub fn nearest_path_point(path: &[Vec<f64>], target_point: [f64; 2]) -> Option<(usize, Vec<f64>)> {
     if path.is_empty() {
         return None;
     } else {
         let mut nearest = (0, f64::MAX);
         for (i, p) in path.iter().enumerate() {
-            let dist =
-                ((target_point[0] - p[0]).powi(2) + (target_point[1] - p[1]).powi(2)).sqrt();
+            let dist = ((target_point[0] - p[0]).powi(2) + (target_point[1] - p[1]).powi(2)).sqrt();
             if dist < nearest.1 {
                 nearest.0 = i;
                 nearest.1 = dist;

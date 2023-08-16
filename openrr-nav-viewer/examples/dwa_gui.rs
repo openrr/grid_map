@@ -52,7 +52,7 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
         } else {
             interpolated_path.push({
                 let mut p = p0.to_owned();
-                p.push(0.);
+                p.push(direction);
                 p
             });
         }
