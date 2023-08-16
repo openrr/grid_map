@@ -47,7 +47,7 @@ pub struct Limits {
 /// DWA Planner
 pub struct DwaPlanner {
     limits: Limits,
-    map_name_weight: HashMap<String, f64>,
+    cost_name_weight: HashMap<String, f64>,
     controller_dt: f64,
     simulation_duration: f64,
     num_vel_sample: i32,
@@ -85,14 +85,14 @@ fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> 
 impl DwaPlanner {
     pub fn new(
         limits: Limits,
-        map_name_weight: HashMap<String, f64>,
+        cost_name_weight: HashMap<String, f64>,
         controller_dt: f64,
         simulation_duration: f64,
         num_vel_sample: i32,
     ) -> Self {
         Self {
             limits,
-            map_name_weight,
+            cost_name_weight,
             controller_dt,
             simulation_duration,
             num_vel_sample,
@@ -109,10 +109,10 @@ impl DwaPlanner {
         let min_vel = &config["limits"]["min_velocity"].as_vec().unwrap();
         let min_acc = &config["limits"]["min_acceleration"].as_vec().unwrap();
 
-        let map_name_weight_from_config = &config["map_name_weight"].as_vec().unwrap();
-        let mut map_name_weight = HashMap::new();
-        for m in map_name_weight_from_config.iter() {
-            map_name_weight.insert(
+        let cost_name_weight_from_config = &config["cost_name_weight"].as_vec().unwrap();
+        let mut cost_name_weight = HashMap::new();
+        for m in cost_name_weight_from_config.iter() {
+            cost_name_weight.insert(
                 m["name"].as_str().unwrap().to_owned(),
                 m["value"].as_f64().unwrap().to_owned(),
             );
@@ -137,7 +137,7 @@ impl DwaPlanner {
                     theta: min_acc[1].as_f64().unwrap(),
                 },
             },
-            map_name_weight,
+            cost_name_weight,
             controller_dt: *(&config["controller_dt"].as_f64().unwrap()),
             simulation_duration: *(&config["simulation_duration"].as_f64().unwrap()),
             num_vel_sample: *(&config["num_vel_sample"].as_i64().unwrap()) as i32,
@@ -217,23 +217,36 @@ impl DwaPlanner {
         current_pose: &Pose,
         current_velocity: &Velocity,
         maps: &LayeredGridMap<u8>,
+        angles: &HashMap<String, f64>,
     ) -> Plan {
         let plans = self.predicted_plan_candidates(current_pose, current_velocity);
         let mut min_cost = f64::MAX;
         let mut selected_plan = Plan::default();
         for plan in plans {
             let mut all_layer_cost = 0.0;
-            for (name, v) in &self.map_name_weight {
-                let cost = v * accumulate_values_by_positions(
-                    maps.layer(name).unwrap(),
-                    &plan
-                        .path
-                        .iter()
-                        .map(|p| Position::new(p.translation.x, p.translation.y))
-                        .collect::<Vec<_>>(),
-                );
-                all_layer_cost += cost;
+            for (cost_name, v) in &self.cost_name_weight {
+                let dist_cost = match maps.layer(cost_name) {
+                    Some(map) => {
+                        v * accumulate_values_by_positions(
+                            map,
+                            &plan
+                                .path
+                                .iter()
+                                .map(|p| Position::new(p.translation.x, p.translation.y))
+                                .collect::<Vec<_>>(),
+                        )
+                    }
+                    None => 0.,
+                };
+                all_layer_cost += dist_cost;
+
+                let angle_cost = match angles.get(cost_name) {
+                    Some(angle) => v * (angle - plan.path.last().unwrap().rotation.angle()).abs(),
+                    None => 0.,
+                };
+                all_layer_cost += angle_cost;
             }
+
             if all_layer_cost < min_cost {
                 min_cost = all_layer_cost;
                 selected_plan = plan.clone();
@@ -248,15 +261,15 @@ impl DwaPlanner {
     }
 
     pub fn map_name_weight(&self) -> &HashMap<String, f64> {
-        &self.map_name_weight
+        &self.cost_name_weight
     }
 
     pub fn map_name_weight_mut(&mut self) -> &mut HashMap<String, f64> {
-        &mut self.map_name_weight
+        &mut self.cost_name_weight
     }
 
     pub fn map_names(&self) -> impl Iterator<Item = &String> {
-        self.map_name_weight.keys()
+        self.cost_name_weight.keys()
     }
 
     pub fn controller_dt(&self) -> f64 {
@@ -297,6 +310,7 @@ mod tests {
         }
         map
     }
+
     #[test]
     fn dwa_planner_test() {
         use rand::distributions::{Distribution, Uniform};
@@ -350,6 +364,7 @@ mod tests {
         maps.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
         maps.insert(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
         let layered = LayeredGridMap::new(maps);
+        let angles = HashMap::new();
         let mut weights = HashMap::new();
         weights.insert(PATH_DISTANCE_MAP_NAME.to_owned(), 0.8);
         weights.insert(GOAL_DISTANCE_MAP_NAME.to_owned(), 0.9);
@@ -380,7 +395,8 @@ mod tests {
         let mut plan_map = map.clone();
         let mut reached = false;
         for i in 0..100 {
-            let plan = planner.plan_local_path(&current_pose, &current_velocity, &layered);
+            let plan =
+                planner.plan_local_path(&current_pose, &current_velocity, &layered, &angles);
             println!("vel = {:?} cost = {}", current_velocity, plan.cost);
             println!(
                 "pose = {:?}, {}",

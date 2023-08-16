@@ -1,9 +1,14 @@
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, plot::Plot, Color32},
+    egui::{
+        self,
+        plot::{Line, Plot, PlotPoints, Polygon},
+        Color32,
+    },
     EguiContexts, EguiPlugin,
 };
-use grid_map::Position;
+use nalgebra::Vector2;
+use openrr_nav::Pose;
 
 use crate::*;
 
@@ -11,17 +16,24 @@ pub const PATH_DISTANCE_MAP_NAME: &str = "path";
 pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
 pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
 pub const LOCAL_GOAL_DISTANCE_MAP_NAME: &str = "local_goal";
+pub const ROTATION_COST_NAME: &str = "rotation";
+pub const PATH_DIRECTION_COST_NAME: &str = "path_direction";
+pub const GOAL_DIRECTION_COST_NAME: &str = "goal_direction";
 
 pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
-pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
+pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.1;
 pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
-pub const DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT: f64 = 0.2;
+pub const DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT: f64 = 0.8;
+pub const DEFAULT_ROTATION_COST_WEIGHT: f64 = 0.1;
+pub const DEFAULT_PATH_DIRECTION_COST_WEIGHT: f64 = 0.1;
+pub const DEFAULT_GOAL_DIRECTION_COST_WEIGHT: f64 = 0.01;
 
 #[derive(Debug, Resource)]
 pub struct UiCheckboxes {
     pub set_start: bool,
     pub set_goal: bool,
     pub restart: bool,
+    pub counter: usize,
 }
 
 impl Default for UiCheckboxes {
@@ -30,6 +42,34 @@ impl Default for UiCheckboxes {
             set_start: false,
             set_goal: false,
             restart: true,
+            counter: 0,
+        }
+    }
+}
+
+#[derive(Debug, Default, Resource)]
+pub struct DisplayedArrows(Option<[[f64; 2]; 2]>);
+
+impl DisplayedArrows {
+    pub fn set_start(&mut self, point: [f64; 2]) {
+        match self.0 {
+            Some(p) => {
+                self.0 = Some([point, p[1]]);
+            }
+            None => {
+                self.0 = Some([point, point]);
+            }
+        }
+    }
+
+    pub fn set_end(&mut self, point: [f64; 2]) {
+        match self.0 {
+            Some(p) => {
+                self.0 = Some([p[0], point]);
+            }
+            None => {
+                self.0 = Some([point, point]);
+            }
         }
     }
 }
@@ -56,15 +96,18 @@ impl BevyAppNav {
 
         let map_type = MapType::default();
         let ui_checkboxes = UiCheckboxes::default();
+        let displayed_arrows = DisplayedArrows::default();
 
         self.app
             .insert_resource(nav)
             .insert_resource(map_type)
             .insert_resource(ui_checkboxes)
+            .insert_resource(displayed_arrows)
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
             .add_system(ui_system)
-            .add_system(update_system);
+            .add_system(update_system)
+            .add_system(bottom_monitor_system);
     }
 
     pub fn run(&mut self) {
@@ -77,6 +120,7 @@ fn update_system(
     res_nav: Res<NavigationViz>,
     map_type: Res<MapType>,
     mut ui_checkboxes: ResMut<UiCheckboxes>,
+    mut displayed_arrows: ResMut<DisplayedArrows>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -132,25 +176,74 @@ fn update_system(
             if let Some(p) = pointer_coordinate {
                 if ui_checkboxes.set_start
                     && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
-                    && !ctx.is_pointer_over_area()
+                    && ui_checkboxes.counter == 1
                 {
                     ui_checkboxes.set_start = false;
                     let mut start_position = res_nav.start_position.lock();
-                    *start_position = Position::new(p.x, p.y);
+                    let angle = (p.y - start_position.translation.y)
+                        .atan2(p.x - start_position.translation.x);
+                    *start_position = Pose::new(
+                        Vector2::new(start_position.translation.x, start_position.translation.y),
+                        angle,
+                    );
+                    println!("start: {:?}", start_position);
+                    ui_checkboxes.counter = 0;
+                    displayed_arrows.0 = None;
+                }
+                if ui_checkboxes.set_start
+                    && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                    && !ctx.is_pointer_over_area()
+                    && ui_checkboxes.counter == 0
+                {
+                    let mut start_position = res_nav.start_position.lock();
+                    *start_position = Pose::new(Vector2::new(p.x, p.y), 0.0);
+                    ui_checkboxes.counter = 1;
+                    displayed_arrows.set_start([p.x, p.y]);
+                }
+                if ui_checkboxes.set_start && ui_checkboxes.counter == 1 {
+                    displayed_arrows.set_end([p.x, p.y]);
                 }
             }
 
             if let Some(p) = pointer_coordinate {
                 if ui_checkboxes.set_goal
                     && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
-                    && !ctx.is_pointer_over_area()
+                    && ui_checkboxes.counter == 1
                 {
                     ui_checkboxes.set_goal = false;
                     let mut goal_position = res_nav.goal_position.lock();
-                    *goal_position = Position::new(p.x, p.y);
+                    let angle = (p.y - goal_position.translation.y)
+                        .atan2(p.x - goal_position.translation.x);
+                    *goal_position = Pose::new(
+                        Vector2::new(goal_position.translation.x, goal_position.translation.y),
+                        angle,
+                    );
+                    println!("goal: {:?}", goal_position);
                     let mut is_run = res_nav.is_run.lock();
                     *is_run = true;
+                    ui_checkboxes.counter = 0;
+                    displayed_arrows.0 = None;
                 }
+                if ui_checkboxes.set_goal
+                    && ctx.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary))
+                    && !ctx.is_pointer_over_area()
+                    && ui_checkboxes.counter == 0
+                {
+                    let mut goal_position = res_nav.goal_position.lock();
+                    *goal_position = Pose::new(Vector2::new(p.x, p.y), 0.0);
+                    ui_checkboxes.counter = 1;
+                    displayed_arrows.set_start([p.x, p.y]);
+                }
+                if ui_checkboxes.set_goal && ui_checkboxes.counter == 1 {
+                    displayed_arrows.set_end([p.x, p.y]);
+                }
+            }
+
+            match &displayed_arrows.0 {
+                Some(p) => {
+                    plot_ui.line(Line::new(PlotPoints::new(vec![p[0], p[1]])));
+                }
+                None => {}
             }
         });
     });
@@ -188,6 +281,7 @@ fn ui_system(
                     {
                         ui_checkboxes.set_start = !ui_checkboxes.set_start;
                         ui_checkboxes.set_goal = false;
+                        ui_checkboxes.counter = 0;
                     }
                     if c_ui[1]
                         .add_sized([Default::default(), 30.], egui::Button::new("Set Goal"))
@@ -195,6 +289,7 @@ fn ui_system(
                     {
                         ui_checkboxes.set_goal = !ui_checkboxes.set_goal;
                         ui_checkboxes.set_start = false;
+                        ui_checkboxes.counter = 0;
                     }
                 });
             });
@@ -239,6 +334,33 @@ fn ui_system(
                     h_ui.spacing_mut().slider_width = 250.;
                     h_ui.add(egui::Slider::new(&mut local_goal_weight, 0.0..=1.0));
                 });
+                let mut rotation_cost_weight =
+                    weight.get(ROTATION_COST_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("rotation weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(&mut rotation_cost_weight, 0.0..=1.0));
+                });
+                let mut path_direction_cost_weight =
+                    weight.get(PATH_DIRECTION_COST_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("path direction weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(
+                        &mut path_direction_cost_weight,
+                        0.0..=1.0,
+                    ));
+                });
+                let mut goal_direction_cost_weight =
+                    weight.get(GOAL_DIRECTION_COST_NAME).unwrap().to_owned() as f32;
+                ui.horizontal(|h_ui| {
+                    h_ui.add_sized([100.0, 30.0], egui::Label::new("goal direction weight"));
+                    h_ui.spacing_mut().slider_width = 250.;
+                    h_ui.add(egui::Slider::new(
+                        &mut goal_direction_cost_weight,
+                        0.0..=1.0,
+                    ));
+                });
                 ui.label("");
 
                 ui.horizontal(|h_ui| {
@@ -250,6 +372,9 @@ fn ui_system(
                         goal_weight = DEFAULT_GOAL_DISTANCE_WEIGHT as f32;
                         obstacle_weight = DEFAULT_OBSTACLE_DISTANCE_WEIGHT as f32;
                         local_goal_weight = DEFAULT_LOCAL_GOAL_DISTANCE_MAP_WEIHT as f32;
+                        rotation_cost_weight = DEFAULT_ROTATION_COST_WEIGHT as f32;
+                        path_direction_cost_weight = DEFAULT_PATH_DIRECTION_COST_WEIGHT as f32;
+                        goal_direction_cost_weight = DEFAULT_GOAL_DIRECTION_COST_WEIGHT as f32;
                     }
                 });
 
@@ -273,6 +398,15 @@ fn ui_system(
                     LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
                     local_goal_weight as f64,
                 );
+                weight.insert(ROTATION_COST_NAME.to_owned(), rotation_cost_weight as f64);
+                weight.insert(
+                    PATH_DIRECTION_COST_NAME.to_owned(),
+                    path_direction_cost_weight as f64,
+                );
+                weight.insert(
+                    GOAL_DIRECTION_COST_NAME.to_owned(),
+                    goal_direction_cost_weight as f64,
+                );
             }
             ui.label("");
             ui.separator();
@@ -290,5 +424,51 @@ fn ui_system(
                     ))
                     .unwrap();
             }
+        });
+}
+
+fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>) {
+    let ctx = contexts.ctx_mut();
+
+    egui::TopBottomPanel::bottom("monitor")
+        .default_height(150.)
+        .show(ctx, |ui| {
+            let angle_table = res_nav.angle_table.lock();
+
+            ui.columns(angle_table.len(), |c_ui| {
+                let mut circle_points = vec![];
+                let num = 20;
+                for i in 0..num {
+                    let theta = i as f64 / num as f64 * 2. * std::f64::consts::PI;
+                    circle_points.push([theta.cos(), theta.sin()]);
+                }
+
+                for (i, (name, angle)) in angle_table.iter().enumerate() {
+                    c_ui[i].label(name);
+                    Plot::new(format!("angle{}", i))
+                        .data_aspect(1.)
+                        .auto_bounds_x()
+                        .auto_bounds_y()
+                        .allow_drag(false)
+                        .allow_scroll(false)
+                        .allow_zoom(false)
+                        .allow_boxed_zoom(false)
+                        .allow_double_click_reset(false)
+                        .show_axes([false, false])
+                        .show_background(false)
+                        .show(&mut c_ui[i], |plot_ui| {
+                            plot_ui.polygon(
+                                Polygon::new(PlotPoints::new(circle_points.clone()))
+                                    .color(Color32::WHITE)
+                                    .width(2.),
+                            );
+                            plot_ui.line(
+                                Line::new(vec![[0., 0.], [angle.cos(), angle.sin()]])
+                                    .color(Color32::RED)
+                                    .width(3.),
+                            );
+                        });
+                }
+            });
         });
 }

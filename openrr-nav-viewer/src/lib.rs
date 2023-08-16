@@ -21,14 +21,20 @@ impl pb::api_server::Api for NavigationViz {
         _request: tonic::Request<()>,
     ) -> Result<tonic::Response<pb::Position>, tonic::Status> {
         let start = self.start_position.lock();
-        Ok(tonic::Response::new((*start).into()))
+        Ok(tonic::Response::new(pb::Position {
+            x: start.translation.x,
+            y: start.translation.y,
+        }))
     }
     async fn get_goal_position(
         &self,
         _request: tonic::Request<()>,
     ) -> Result<tonic::Response<pb::Position>, tonic::Status> {
         let goal = self.goal_position.lock();
-        Ok(tonic::Response::new((*goal).into()))
+        Ok(tonic::Response::new(pb::Position {
+            x: goal.translation.x,
+            y: goal.translation.y,
+        }))
     }
     async fn get_planner(
         &self,

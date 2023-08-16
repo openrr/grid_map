@@ -1,6 +1,6 @@
 use grid_map::*;
 use nalgebra as na;
-use openrr_nav::*;
+use openrr_nav::{utils::nearest_path_point, *};
 use openrr_nav_viewer::*;
 use rand::distributions::{Distribution, Uniform};
 
@@ -33,11 +33,11 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
         return path;
     }
     let mut interpolated_path = vec![];
-    interpolated_path.push(path.first().unwrap().clone());
     for (p0, p1) in path.iter().zip(path.iter().skip(1)) {
         let diff_x = p1[0] - p0[0];
         let diff_y = p1[1] - p0[1];
         let diff = (diff_x.powi(2) + diff_y.powi(2)).sqrt();
+        let direction = diff_y.atan2(diff_x);
         let interpolate_num = (diff / extend_length) as usize;
         if interpolate_num > 0 {
             let unit_diff_x = diff_x / interpolate_num as f64;
@@ -46,14 +46,42 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
                 interpolated_path.push(vec![
                     p0[0] + unit_diff_x * j as f64,
                     p0[1] + unit_diff_y * j as f64,
+                    direction,
                 ]);
             }
         } else {
-            interpolated_path.push(p0.to_owned());
+            interpolated_path.push({
+                let mut p = p0.to_owned();
+                p.push(direction);
+                p
+            });
         }
     }
-    interpolated_path.push(path.last().unwrap().clone());
+    let last_point_angle = interpolated_path.last().unwrap()[2];
+    interpolated_path.push({
+        let mut end_path = path.last().unwrap().clone();
+        end_path.push(last_point_angle);
+        end_path
+    });
     interpolated_path
+}
+
+fn add_target_position_to_path(path: Vec<Vec<f64>>, target_pose: &Pose) -> Vec<Vec<f64>> {
+    let mut p = path.clone();
+    let target_pose_vec = vec![
+        target_pose.translation.x,
+        target_pose.translation.y,
+        target_pose.rotation.angle(),
+    ];
+    match p.last_mut() {
+        Some(v) => {
+            *v = target_pose_vec;
+        }
+        None => {
+            p.push(target_pose_vec);
+        }
+    }
+    p
 }
 
 fn main() {
@@ -80,9 +108,17 @@ fn main() {
             let goal;
             {
                 let locked_start = cloned_nav.start_position.lock();
-                start = [locked_start.x, locked_start.y];
+                start = [
+                    locked_start.translation.x,
+                    locked_start.translation.y,
+                    locked_start.rotation.angle(),
+                ];
                 let locked_goal = cloned_nav.goal_position.lock();
-                goal = [locked_goal.x, locked_goal.y];
+                goal = [
+                    locked_goal.translation.x,
+                    locked_goal.translation.y,
+                    locked_goal.rotation.angle(),
+                ];
             }
             let is_free = |p: &[f64]| {
                 !matches!(
@@ -92,8 +128,8 @@ fn main() {
             };
             const EXTEND_LENGTH: f64 = 0.05;
             let mut result = rrt::dual_rrt_connect(
-                &start,
-                &goal,
+                &[start[0], start[1]],
+                &[goal[0], goal[1]],
                 is_free,
                 || {
                     let mut rng = rand::thread_rng();
@@ -105,6 +141,10 @@ fn main() {
             .unwrap();
             rrt::smooth_path(&mut result, is_free, EXTEND_LENGTH, 1000);
             let result = linear_interpolate_path(result, EXTEND_LENGTH);
+            let result = add_target_position_to_path(
+                result,
+                &Pose::new(Vector2::new(goal[0], goal[1]), goal[2]),
+            );
             {
                 let mut locked_robot_path = cloned_nav.robot_path.lock();
                 locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
@@ -125,7 +165,8 @@ fn main() {
 
             let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
-            let local_goal_disrance_map = local_goal_distance_map(&map, &result, start).unwrap();
+            let local_goal_disrance_map =
+                local_goal_distance_map(&map, &result, [start[0], start[1]]).unwrap();
 
             {
                 let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
@@ -141,8 +182,15 @@ fn main() {
                 );
             }
 
-            let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
-            let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
+            {
+                let mut locked_angle_table = cloned_nav.angle_table.lock();
+                locked_angle_table.insert(ROTATION_COST_NAME.to_owned(), start[2]);
+                locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), start[2]);
+                locked_angle_table.insert(GOAL_DIRECTION_COST_NAME.to_owned(), goal[2]);
+            }
+
+            let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), start[2]);
+            let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), goal[2]);
 
             let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
             let mut plan_map = map.clone();
@@ -180,14 +228,33 @@ fn main() {
                         local_goal_disrance_map,
                     );
                 }
+
+                {
+                    let nearest_path_point = nearest_path_point(
+                        &result,
+                        [current_pose.translation.x, current_pose.translation.y],
+                    );
+                    let mut locked_angle_table = cloned_nav.angle_table.lock();
+                    locked_angle_table
+                        .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
+                    match nearest_path_point {
+                        Some(p) => {
+                            locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), p.1[2]);
+                        }
+                        None => {}
+                    }
+                }
+
                 let (plan, candidates) = {
                     let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                    let locked_angle_table = cloned_nav.angle_table.lock();
                     let locked_planner = cloned_nav.planner.lock();
                     (
                         locked_planner.plan_local_path(
                             &current_pose,
                             &current_velocity,
                             &locked_layered_grid_map,
+                            &locked_angle_table,
                         ),
                         locked_planner.predicted_plan_candidates(&current_pose, &current_velocity),
                     )
@@ -220,9 +287,12 @@ fn main() {
                     println!("OUT OF MAP!");
                     return;
                 }
-                const GOAL_THRESHOLD: f64 = 0.1;
+                const GOAL_THRESHOLD_DISTANCE: f64 = 0.1;
+                const GOAL_THRESHOLD_ANGLE_DIFFERENCE: f64 = 0.4;
                 if (goal_pose.translation.vector - current_pose.translation.vector).norm()
-                    < GOAL_THRESHOLD
+                    < GOAL_THRESHOLD_DISTANCE
+                    && (goal_pose.rotation.angle() - current_pose.rotation.angle()).abs()
+                        < GOAL_THRESHOLD_ANGLE_DIFFERENCE
                 {
                     println!("GOAL! count = {i}");
                     break;
