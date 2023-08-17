@@ -234,12 +234,16 @@ fn main() {
                         &result,
                         [current_pose.translation.x, current_pose.translation.y],
                     );
+                    let len = result.len();
                     let mut locked_angle_table = cloned_nav.angle_table.lock();
                     locked_angle_table
                         .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
                     match nearest_path_point {
-                        Some(p) => {
-                            locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), p.1[2]);
+                        Some((idx, _)) => {
+                            locked_angle_table.insert(
+                                PATH_DIRECTION_COST_NAME.to_owned(),
+                                result[(idx + 20).min(len - 1)][2],
+                            );
                         }
                         None => {}
                     }
