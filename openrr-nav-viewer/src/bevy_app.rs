@@ -150,7 +150,7 @@ fn update_system(
                         }
                     }
                 }
-                MapType::LocalGoalDisranceMap => {
+                MapType::LocalGoalDistanceMap => {
                     if let Some(dist_map) = map.layer(LOCAL_GOAL_DISTANCE_MAP_NAME) {
                         for p in grid_map_to_polygon(dist_map) {
                             plot_ui.polygon(p);
@@ -266,7 +266,7 @@ fn ui_system(
             ui.radio_value(map_type.as_mut(), MapType::ObstacleDistanceMap, "Obstacle");
             ui.radio_value(
                 map_type.as_mut(),
-                MapType::LocalGoalDisranceMap,
+                MapType::LocalGoalDistanceMap,
                 "Local Goal",
             );
             ui.label("");

@@ -165,7 +165,7 @@ fn main() {
 
             let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
-            let local_goal_disrance_map =
+            let local_goal_distance_map =
                 local_goal_distance_map(&map, &result, [start[0], start[1]]).unwrap();
 
             {
@@ -178,7 +178,7 @@ fn main() {
                     .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
                 locked_layered_grid_map.add_layer(
                     LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
-                    local_goal_disrance_map,
+                    local_goal_distance_map,
                 );
             }
 
@@ -196,7 +196,6 @@ fn main() {
             let mut plan_map = map.clone();
 
             for i in 0..300 {
-                // let dynamic_map = new_dynamic_sample_map(i);
                 let dynamic_map = new_sample_map();
                 let path_distance_map =
                     openrr_nav::path_distance_map(&dynamic_map, &path_grid).unwrap();
@@ -208,7 +207,7 @@ fn main() {
                 let obstacle_distance_map =
                     openrr_nav::obstacle_distance_map(&dynamic_map).unwrap();
 
-                let local_goal_disrance_map = openrr_nav::local_goal_distance_map(
+                let local_goal_distance_map = openrr_nav::local_goal_distance_map(
                     &map,
                     &result,
                     [current_pose.translation.x, current_pose.translation.y],
@@ -225,7 +224,7 @@ fn main() {
                         .add_layer(OBSTACLE_DISTANCE_MAP_NAME.to_owned(), obstacle_distance_map);
                     locked_layered_grid_map.add_layer(
                         LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
-                        local_goal_disrance_map,
+                        local_goal_distance_map,
                     );
                 }
 
