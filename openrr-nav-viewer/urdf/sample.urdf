@@ -1,0 +1,72 @@
+<robot name="robot">
+  <!-- links -->
+  <link name="plate">
+    <visual>
+      <origin xyz="4.5 4.5 -0.1" rpy="0.0 0.0 0.0" />
+      <geometry>
+        <box size="11 11 0.2" />
+      </geometry>
+      <material name="Gray">
+        <color rgba="0.5 0.5 0.5 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="obstacle1">
+    <visual>
+      <origin xyz="5 3 0.5" rpy="0.0 0.0 0.0" />
+      <geometry>
+        <box size="4 2 1" />
+      </geometry>
+      <material>
+        <color rgba="0.8 0.8 1.0 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="obstacle2">
+    <visual>
+      <origin xyz="6 7 0.5" rpy="0.0 0.0 0.0" />
+      <geometry>
+        <box size="2 3 1" />
+      </geometry>
+      <material>
+        <color rgba="0.8 0.8 1.0 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="goal">
+    <visual>
+      <origin xyz="9 8 1" />
+      <geometry>
+        <cylinder radius="0.05" length="2" />
+      </geometry>
+      <material>
+        <color rgba="1.0 0.0 0.0 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="root">
+    <inertial>
+      <mass value="1" />
+      <inertia ixx="100" ixy="0" ixz="0" iyy="100" iyz="0" izz="100" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.3" rpy="0 0 0" />
+      <geometry>
+        <box size="0.5 0.3 0.6" />
+      </geometry>
+      <material name="White">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.3" rpy="0 0 0" />
+      <geometry>
+        <box size="0.5 0.3 0.6" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
