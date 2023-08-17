@@ -119,19 +119,14 @@ async fn controller(
     let result = linear_interpolate_path(result, EXTEND_LENGTH);
     api.set_global_path(pb::RobotPath::from(robot_path_from_vec_vec(&result)))
         .await?;
-    let path_grid = result
-        .iter()
-        .map(|p| map.to_grid(p[0], p[1]).unwrap())
-        .collect::<Vec<_>>();
 
-    for p in result {
+    for p in result.iter() {
         map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
     }
 
-    let path_distance_map = path_distance_map(&map, &path_grid).unwrap();
+    let path_distance_map = path_distance_map(&map, &result).unwrap();
 
-    let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
-    let goal_distance_map = goal_distance_map(&map, &goal_grid).unwrap();
+    let goal_distance_map = goal_distance_map(&map, &goal).unwrap();
 
     let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
 
