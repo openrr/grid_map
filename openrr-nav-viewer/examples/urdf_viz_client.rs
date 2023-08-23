@@ -1,19 +1,37 @@
+use arci::Localization;
+use arci_urdf_viz::UrdfVizWebClient;
 use grid_map::*;
 use nalgebra as na;
-use openrr_nav::{utils::nearest_path_point, *};
-use openrr_nav_viewer::*;
+use nalgebra::Vector2;
+use openrr_nav::*;
+use openrr_nav_viewer::{BevyAppNav, NavigationViz};
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 fn new_sample_map() -> GridMap<u8> {
-    let mut map =
-        grid_map::GridMap::<u8>::new(Position::new(-2.05, -2.05), Position::new(6.05, 2.05), 0.05);
-    for i in 20..100 {
-        for j in 10..14 {
-            map.set_obstacle(&Grid::new(i + 20, j)).unwrap();
-        }
-        for j in 40..60 {
-            map.set_obstacle(&Grid::new(i, j)).unwrap();
+    let mut map = grid_map::GridMap::<u8>::new(
+        Position::new(-1.05, -1.05),
+        Position::new(10.05, 10.05),
+        0.1,
+    );
+
+    for i in 0..40 {
+        for j in 0..20 {
+            map.set_obstacle(&Grid {
+                x: 40 + i,
+                y: 30 + j,
+            });
         }
     }
+    for i in 0..20 {
+        for j in 0..30 {
+            map.set_obstacle(&Grid {
+                x: 60 + i,
+                y: 65 + j,
+            });
+        }
+    }
+
     map
 }
 
@@ -28,19 +46,45 @@ fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
 }
 
 fn main() {
+    let client = UrdfVizWebClient::default();
+    client.run_send_velocity_thread();
+
     let nav = NavigationViz::default();
+
+    let start = client.current_pose("").unwrap();
+    let start = [
+        start.translation.x,
+        start.translation.y,
+        start.rotation.angle(),
+    ];
+    let goal = [9.0, 8.0, std::f64::consts::FRAC_PI_3];
+    {
+        let mut locked_start = nav.start_position.lock();
+        *locked_start = Pose::new(Vector2::new(start[0], start[1]), start[2]);
+        let mut locked_goal = nav.goal_position.lock();
+        *locked_goal = Pose::new(Vector2::new(goal[0], goal[1]), goal[2]);
+    }
 
     let cloned_nav = nav.clone();
 
     let planner = DwaPlanner::new_from_config(format!(
         "{}/../openrr-nav/config/dwa_parameter_config.yaml",
         env!("CARGO_MANIFEST_DIR")
-    ));
+    ))
+    .unwrap();
 
     {
         let mut locked_planner = cloned_nav.planner.lock();
-        *locked_planner = planner.unwrap();
+        *locked_planner = planner.clone();
     }
+
+    let mut local_plan_executor = LocalPlanExecutor::new(
+        Arc::new(Mutex::new(client.clone())),
+        Arc::new(Mutex::new(client.clone())),
+        "".to_owned(),
+        planner,
+        0.1,
+    );
 
     std::thread::spawn(move || loop {
         if cloned_nav.is_run.lock().to_owned() {
@@ -48,12 +92,15 @@ fn main() {
             let start;
             let goal;
             {
-                let locked_start = cloned_nav.start_position.lock();
+                let current_pose = client.current_pose("").unwrap();
+                let mut locked_start = cloned_nav.start_position.lock();
+                *locked_start = current_pose;
                 start = [
-                    locked_start.translation.x,
-                    locked_start.translation.y,
-                    locked_start.rotation.angle(),
+                    current_pose.translation.x,
+                    current_pose.translation.y,
+                    current_pose.rotation.angle(),
                 ];
+
                 let locked_goal = cloned_nav.goal_position.lock();
                 goal = [
                     locked_goal.translation.x,
@@ -70,103 +117,70 @@ fn main() {
                 locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
             }
 
+            let mut cost_maps = CostMaps::new(&map, &result, &start, &goal);
+            let mut angle_table = AngleTable::new(start[2], goal[2]);
+
             for p in result.iter() {
                 map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
             }
 
-            let mut cost_maps = CostMaps::new(&map, &result, &start, &goal);
+            local_plan_executor.set_cost_maps(cost_maps.layered_grid_map());
             {
                 let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
                 *locked_layered_grid_map = cost_maps.layered_grid_map();
             }
 
-            let mut angle_table = AngleTable::new(start[2], goal[2]);
+            local_plan_executor.set_angle_table(angle_table.angle_table());
             {
                 let mut locked_angle_table = cloned_nav.angle_table.lock();
                 *locked_angle_table = angle_table.angle_table();
             }
 
-            let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), start[2]);
+            let mut current_pose;
             let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), goal[2]);
 
-            let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
-            let mut plan_map = map.clone();
+            const STEP: usize = 2000;
+            for i in 0..STEP {
+                current_pose = local_plan_executor.current_pose().unwrap();
 
-            for i in 0..300 {
                 cost_maps.update(
                     &None,
                     &result,
                     &[current_pose.translation.x, current_pose.translation.y],
                     &[],
                 );
+
+                angle_table.update(Some(current_pose), &result);
+
+                local_plan_executor.set_cost_maps(cost_maps.layered_grid_map());
                 {
                     let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
                     *locked_layered_grid_map = cost_maps.layered_grid_map();
                 }
 
-                angle_table.update(Some(current_pose), &result);
+                local_plan_executor.set_angle_table(angle_table.angle_table());
                 {
-                    let nearest_path_point = nearest_path_point(
-                        &result,
-                        [current_pose.translation.x, current_pose.translation.y],
-                    );
-                    let len = result.len();
                     let mut locked_angle_table = cloned_nav.angle_table.lock();
-                    locked_angle_table
-                        .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
-                    match nearest_path_point {
-                        Some((idx, _)) => {
-                            locked_angle_table.insert(
-                                PATH_DIRECTION_COST_NAME.to_owned(),
-                                result[(idx + 20).min(len - 1)][2],
-                            );
-                        }
-                        None => {}
-                    }
+                    *locked_angle_table = angle_table.angle_table();
                 }
 
-                let (plan, candidates) = {
-                    let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
-                    let locked_angle_table = cloned_nav.angle_table.lock();
-                    let locked_planner = cloned_nav.planner.lock();
-                    (
-                        locked_planner.plan_local_path(
-                            &current_pose,
-                            &current_velocity,
-                            &locked_layered_grid_map,
-                            &locked_angle_table,
-                        ),
-                        locked_planner.predicted_plan_candidates(&current_pose, &current_velocity),
-                    )
-                };
-                {
-                    let mut locked_robot_path = cloned_nav.robot_path.lock();
-                    locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
-                    for (i, candidate) in candidates.iter().enumerate() {
-                        locked_robot_path.add_user_defined_path(
-                            &format!("candidate_{}", i),
-                            RobotPath(candidate.path.clone()),
-                        );
-                    }
-                }
-
-                current_velocity = plan.velocity;
-                current_pose = plan.path[0];
+                local_plan_executor.exec_once().unwrap();
 
                 {
                     let mut locked_robot_pose = cloned_nav.robot_pose.lock();
                     *locked_robot_pose = current_pose;
                 }
-                std::thread::sleep(std::time::Duration::from_millis(50));
 
-                if let Some(grid) =
-                    plan_map.to_grid(current_pose.translation.x, current_pose.translation.y)
-                {
-                    let _ = plan_map.set_value(&grid, 9);
-                } else {
-                    println!("OUT OF MAP!");
-                    return;
-                }
+                println!(
+                    "[ {:4} / {} ] X: {:.3}, Y: {:.3}, THETA: {:.3}",
+                    i + 1,
+                    STEP,
+                    current_pose.translation.x,
+                    current_pose.translation.y,
+                    current_pose.rotation.angle()
+                );
+                std::thread::sleep(std::time::Duration::from_millis(5));
+
                 const GOAL_THRESHOLD_DISTANCE: f64 = 0.1;
                 const GOAL_THRESHOLD_ANGLE_DIFFERENCE: f64 = 0.4;
                 if (goal_pose.translation.vector - current_pose.translation.vector).norm()
@@ -178,6 +192,7 @@ fn main() {
                     break;
                 }
             }
+            local_plan_executor.stop().unwrap();
             {
                 let mut is_run = cloned_nav.is_run.lock();
                 *is_run = false;

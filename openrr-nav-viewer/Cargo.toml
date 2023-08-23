@@ -12,7 +12,7 @@ tonic-build = "0.9"
 bevy = "0.10"
 bevy_egui = "0.20"
 egui = "0.20"
-nalgebra = "0.32"
+nalgebra = "0.30"
 parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
 openrr-nav = { path = "../openrr-nav" }
@@ -25,3 +25,5 @@ tokio = { version = "1", features = ["full"] }
 rand = "0.8"
 rrt = "0.7"
 anyhow = "1"
+arci-urdf-viz = "0.1"
+arci = "0.1"
