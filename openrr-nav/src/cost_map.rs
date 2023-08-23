@@ -73,7 +73,8 @@ pub fn local_goal_distance_map(
     let len = global_path.len();
     let nearest = nearest_path_point(global_path.clone(), current_pose).unwrap();
 
-    let local_goal = global_path[(nearest.0 + 20).min(len - 1)].clone();
+    const LOCAL_GOAL_FORWARD_OFFSET: usize = 20;
+    let local_goal = global_path[(nearest.0 + LOCAL_GOAL_FORWARD_OFFSET).min(len - 1)].clone();
 
     let local_width = (2. * (local_goal[0] - current_pose[0]).abs()).max(1.);
     let local_height = (2. * (local_goal[1] - current_pose[1]).abs()).max(1.);
