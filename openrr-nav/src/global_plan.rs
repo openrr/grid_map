@@ -84,7 +84,7 @@ fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f
             });
         }
     }
-    let last_point_angle = interpolated_path.last().unwrap()[2];
+    let last_point_angle = interpolated_path.last().unwrap_or(&vec![0.; 3])[2];
     interpolated_path.push({
         let mut end_path = path.last().unwrap().clone();
         end_path.push(last_point_angle);

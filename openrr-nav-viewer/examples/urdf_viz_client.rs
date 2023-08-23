@@ -1,3 +1,4 @@
+use arci::Localization;
 use arci_urdf_viz::UrdfVizWebClient;
 use grid_map::*;
 use nalgebra as na;
@@ -50,7 +51,12 @@ fn main() {
 
     let nav = NavigationViz::default();
 
-    let start = [0.0, 0.0, 0.0];
+    let start = client.current_pose("").unwrap();
+    let start = [
+        start.translation.x,
+        start.translation.y,
+        start.rotation.angle(),
+    ];
     let goal = [9.0, 8.0, std::f64::consts::FRAC_PI_3];
     {
         let mut locked_start = nav.start_position.lock();
@@ -74,7 +80,7 @@ fn main() {
 
     let mut local_plan_executor = LocalPlanExecutor::new(
         Arc::new(Mutex::new(client.clone())),
-        Arc::new(Mutex::new(client)),
+        Arc::new(Mutex::new(client.clone())),
         "".to_owned(),
         planner,
         0.1,
@@ -86,12 +92,15 @@ fn main() {
             let start;
             let goal;
             {
-                let locked_start = cloned_nav.start_position.lock();
+                let current_pose = client.current_pose("").unwrap();
+                let mut locked_start = cloned_nav.start_position.lock();
+                *locked_start = current_pose;
                 start = [
-                    locked_start.translation.x,
-                    locked_start.translation.y,
-                    locked_start.rotation.angle(),
+                    current_pose.translation.x,
+                    current_pose.translation.y,
+                    current_pose.rotation.angle(),
                 ];
+
                 let locked_goal = cloned_nav.goal_position.lock();
                 goal = [
                     locked_goal.translation.x,
@@ -101,6 +110,7 @@ fn main() {
             }
 
             let mut global_plan = GlobalPlan::new(map.clone(), start, goal);
+
             let result = global_plan.global_plan();
             {
                 let mut locked_robot_path = cloned_nav.robot_path.lock();
