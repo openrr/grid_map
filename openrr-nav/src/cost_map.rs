@@ -1,4 +1,4 @@
-use grid_map::{Cell, Error, Grid, GridMap, Result};
+use grid_map::{Cell, Error, Grid, GridMap, Position, Result};
 
 use crate::utils::nearest_path_point;
 
@@ -63,6 +63,8 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
     Ok(distance_map)
 }
 
+
+/// Create local goal distance map
 pub fn local_goal_distance_map(
     map: &GridMap<u8>,
     global_path: &[Vec<f64>],
@@ -71,10 +73,27 @@ pub fn local_goal_distance_map(
     let len = global_path.len();
     let nearest = nearest_path_point(global_path.clone(), current_pose).unwrap();
 
-    let local_goal = global_path[(nearest.0 + 20).min(len - 1)].clone();
-    let grid = map.to_grid(local_goal[0], local_goal[1]).unwrap();
+    const LOCAL_GOAL_FORWARD_OFFSET: usize = 20;
+    let local_goal = global_path[(nearest.0 + LOCAL_GOAL_FORWARD_OFFSET).min(len - 1)].clone();
 
-    goal_distance_map(map, &grid)
+    let local_width = (2. * (local_goal[0] - current_pose[0]).abs()).max(1.);
+    let local_height = (2. * (local_goal[1] - current_pose[1]).abs()).max(1.);
+
+    let resolution = map.resolution();
+
+    let min_point = Position::new(
+        current_pose[0] - local_width * 0.5 - resolution,
+        current_pose[1] - local_height * 0.5 - resolution,
+    );
+    let max_point = Position::new(
+        current_pose[0] + local_width * 0.5 + resolution,
+        current_pose[1] + local_height * 0.5 + resolution,
+    );
+
+    let local_map = GridMap::<u8>::new(min_point, max_point, resolution);
+    let grid = local_map.to_grid(local_goal[0], local_goal[1]).unwrap();
+
+    goal_distance_map(&local_map, &grid)
 }
 
 pub fn expand_distance_map_internal<F>(

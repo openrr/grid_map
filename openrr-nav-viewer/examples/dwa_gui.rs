@@ -234,12 +234,18 @@ fn main() {
                         &result,
                         [current_pose.translation.x, current_pose.translation.y],
                     );
+                    let len = result.len();
                     let mut locked_angle_table = cloned_nav.angle_table.lock();
                     locked_angle_table
                         .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
+                    const FORWARD_OFFSET: usize = 20;
                     match nearest_path_point {
-                        Some(p) => {
-                            locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), p.1[2]);
+                        Some((idx, _)) => {
+                            let look_ahead_idx = (idx + FORWARD_OFFSET).min(len - 1);
+                            locked_angle_table.insert(
+                                PATH_DIRECTION_COST_NAME.to_owned(),
+                                result[look_ahead_idx][2],
+                            );
                         }
                         None => {}
                     }
