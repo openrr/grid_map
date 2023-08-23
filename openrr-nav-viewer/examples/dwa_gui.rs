@@ -98,6 +98,10 @@ fn main() {
         let mut locked_planner = cloned_nav.planner.lock();
         *locked_planner = planner.unwrap();
     }
+    {
+        let mut locked_map = cloned_nav.empty_map.lock();
+        *locked_map = new_sample_map();
+    }
 
     std::thread::spawn(move || loop {
         if cloned_nav.is_run.lock().to_owned() {

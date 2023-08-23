@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::{
     egui::{
-        self,
+        self, emath,
+        epaint::RectShape,
         plot::{Line, Plot, PlotPoints, Polygon},
-        Color32,
+        Color32, Pos2, Rounding, Sense, Stroke,
     },
     EguiContexts, EguiPlugin,
 };
@@ -34,6 +35,7 @@ pub struct UiCheckboxes {
     pub set_goal: bool,
     pub restart: bool,
     pub counter: usize,
+    pub is_painting: bool,
 }
 
 impl Default for UiCheckboxes {
@@ -43,6 +45,7 @@ impl Default for UiCheckboxes {
             set_goal: false,
             restart: true,
             counter: 0,
+            is_painting: false,
         }
     }
 }
@@ -74,7 +77,11 @@ impl DisplayedArrows {
     }
 }
 
-#[derive(Default)]
+#[derive(Resource, Default)]
+struct PaintedGlobalPath {
+    pub lines: Vec<Vec<Pos2>>,
+}
+
 pub struct BevyAppNav {
     app: App,
 }
@@ -97,17 +104,20 @@ impl BevyAppNav {
         let map_type = MapType::default();
         let ui_checkboxes = UiCheckboxes::default();
         let displayed_arrows = DisplayedArrows::default();
+        let painted_global_path = PaintedGlobalPath::default();
 
         self.app
             .insert_resource(nav)
             .insert_resource(map_type)
             .insert_resource(ui_checkboxes)
             .insert_resource(displayed_arrows)
+            .insert_resource(painted_global_path)
             .add_plugins(user_plugin)
             .add_plugin(EguiPlugin)
             .add_system(ui_system)
             .add_system(update_system)
-            .add_system(bottom_monitor_system);
+            .add_system(bottom_monitor_system)
+            .add_system(painting_ui_system);
     }
 
     pub fn run(&mut self) {
@@ -424,6 +434,12 @@ fn ui_system(
                     ))
                     .unwrap();
             }
+
+            ui.label("");
+            ui.separator();
+            ui.label("");
+
+            ui.checkbox(&mut ui_checkboxes.is_painting, "Painting Global Path");
         });
 }
 
@@ -470,5 +486,89 @@ fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>
                         });
                 }
             });
+        });
+}
+
+fn painting_ui_system(
+    mut contexts: EguiContexts,
+    mut ui_checkboxes: ResMut<UiCheckboxes>,
+    mut painted_global_path: ResMut<PaintedGlobalPath>,
+    res_nav: Res<NavigationViz>,
+) {
+    let ctx = contexts.ctx_mut();
+
+    egui::Window::new("Paint Global Path")
+        .open(&mut ui_checkboxes.is_painting)
+        .default_size([600., 300.])
+        .show(ctx, |paint_ui| {
+            if paint_ui.button("Reset").clicked() {
+                painted_global_path.lines.clear();
+            }
+
+            paint_ui.separator();
+
+            let (mut response, painter) =
+                paint_ui.allocate_painter(paint_ui.available_size_before_wrap(), Sense::drag());
+
+            let to_screen = emath::RectTransform::from_to(
+                bevy_egui::egui::Rect::from_min_size(
+                    Pos2::ZERO,
+                    response.rect.square_proportions(),
+                ),
+                response.rect,
+            );
+            let from_screen = to_screen.inverse();
+
+            if painted_global_path.lines.is_empty() {
+                painted_global_path.lines.push(vec![]);
+            }
+
+            let current_line = painted_global_path.lines.last_mut().unwrap();
+
+            if let Some(pointer_pos) = response.interact_pointer_pos() {
+                let canvas_pos = from_screen * pointer_pos;
+                if current_line.last() != Some(&canvas_pos) {
+                    current_line.push(canvas_pos);
+                    response.mark_changed();
+                }
+            } else if !current_line.is_empty() {
+                painted_global_path.lines.push(vec![]);
+                response.mark_changed();
+            }
+
+            let map = { res_nav.empty_map.lock().copy_without_value() };
+            let rects = convert_grid_map_obstacle_to_egui_mesh(&map);
+            let grids = rects.iter().enumerate().map(|(idx, rect)| {
+                egui::Shape::Rect(RectShape {
+                    rect: bevy_egui::egui::Rect {
+                        min: to_screen * rect.min,
+                        max: to_screen * rect.max,
+                    },
+                    rounding: Rounding::none(),
+                    fill: if idx == 0 {
+                        Color32::WHITE
+                    } else {
+                        Color32::RED
+                    },
+                    stroke: Stroke {
+                        width: 0.,
+                        color: Color32::BLACK,
+                    },
+                })
+            });
+            painter.extend(grids);
+
+            let shapes = painted_global_path
+                .lines
+                .iter()
+                .filter(|line| line.len() >= 2)
+                .map(|line| {
+                    let points: Vec<Pos2> = line.iter().map(|p| to_screen * *p).collect();
+                    egui::Shape::line(points, Stroke::new(2., Color32::BLUE))
+                });
+
+            painter.extend(shapes);
+
+            response
         });
 }

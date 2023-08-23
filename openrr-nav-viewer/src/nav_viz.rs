@@ -14,6 +14,7 @@ pub struct NavigationViz {
     pub start_position: Arc<Mutex<Pose>>,
     pub goal_position: Arc<Mutex<Pose>>,
     pub planner: Arc<Mutex<DwaPlanner>>,
+    pub empty_map: Arc<Mutex<GridMap<u8>>>,
 }
 
 impl Default for NavigationViz {
@@ -27,6 +28,11 @@ impl Default for NavigationViz {
             start_position: Arc::new(Mutex::new(Pose::new(Vector2::new(-1.6, -1.8), 0.0))),
             goal_position: Arc::new(Mutex::new(Pose::new(Vector2::new(5.0, 1.0), 0.0))),
             planner: Arc::new(Mutex::new(DwaPlanner::default())),
+            empty_map: Arc::new(Mutex::new(GridMap::new(
+                Position { x: -1., y: -1. },
+                Position { x: 1., y: 1. },
+                0.05,
+            ))),
         }
     }
 }

@@ -2,11 +2,13 @@ mod bevy_app;
 mod converter;
 mod map_type;
 mod nav_viz;
+mod utils;
 
 pub use bevy_app::*;
 pub use converter::*;
 pub use map_type::*;
 pub use nav_viz::*;
+pub use utils::*;
 
 pub mod pb {
     tonic::include_proto!("openrr_nav_viewer");
