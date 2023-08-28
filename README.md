@@ -6,6 +6,8 @@ sandbox for implementation of grid_map and navigation related code.
 
 ## Pre-requirements
 
+On Ubuntu:
+
 ```bash
 sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev protobuf-compiler
 ```
@@ -13,6 +15,5 @@ sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev protob
 ## Try examples
 
 ```bash
-cargo build --examples --release
-./target/release/dwa_gui
+cargo run --release --example dwa_gui
 ```
