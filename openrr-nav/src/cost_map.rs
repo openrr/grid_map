@@ -63,7 +63,6 @@ pub fn obstacle_distance_map(map: &GridMap<u8>) -> Result<GridMap<u8>> {
     Ok(distance_map)
 }
 
-
 /// Create local goal distance map
 pub fn local_goal_distance_map(
     map: &GridMap<u8>,

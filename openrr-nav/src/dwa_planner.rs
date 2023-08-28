@@ -395,8 +395,7 @@ mod tests {
         let mut plan_map = map.clone();
         let mut reached = false;
         for i in 0..100 {
-            let plan =
-                planner.plan_local_path(&current_pose, &current_velocity, &layered, &angles);
+            let plan = planner.plan_local_path(&current_pose, &current_velocity, &layered, &angles);
             println!("vel = {:?} cost = {}", current_velocity, plan.cost);
             println!(
                 "pose = {:?}, {}",
