@@ -105,7 +105,7 @@ pub fn expand_distance_map_internal<F>(
 where
     F: Fn(u8) -> u8,
 {
-    if !map.cells().iter().any(|c| c.is_uninitialized()) {
+    if !map.cells().iter().any(|c| c.is_uninitialized()) || previous_grids.is_empty() {
         return true;
     }
     let current_value = increment_func(previous_value);
