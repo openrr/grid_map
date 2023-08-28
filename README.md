@@ -15,6 +15,5 @@ sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev protob
 ## Try examples
 
 ```bash
-cargo build --bins --examples --release
-./target/release/examples/dwa_gui
+cargo run --release --example dwa_gui
 ```
