@@ -16,4 +16,4 @@ yaml-rust ="0.4"
 [dev-dependencies]
 rand = "0.8"
 rrt = "0.7"
-bevy = "0.10"
+bevy = "0.11"
