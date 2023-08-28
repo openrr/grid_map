@@ -104,10 +104,10 @@ impl BevyAppNav {
             .insert_resource(ui_checkboxes)
             .insert_resource(displayed_arrows)
             .add_plugins(user_plugin)
-            .add_plugin(EguiPlugin)
-            .add_system(ui_system)
-            .add_system(update_system)
-            .add_system(bottom_monitor_system);
+            .add_plugins(EguiPlugin)
+            .add_systems(Update, ui_system)
+            .add_systems(Update, update_system)
+            .add_systems(Update, bottom_monitor_system);
     }
 
     pub fn run(&mut self) {

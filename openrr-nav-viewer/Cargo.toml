@@ -9,9 +9,8 @@ edition = "2021"
 tonic-build = "0.9"
 
 [dependencies]
-bevy = "0.10"
-bevy_egui = "0.20"
-egui = "0.20"
+bevy = "0.11"
+bevy_egui = "0.21"
 nalgebra = "0.32"
 parking_lot = "0.12"
 grid_map = { path = "../grid_map" }
