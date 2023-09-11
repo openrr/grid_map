@@ -2,7 +2,6 @@ use grid_map::*;
 use openrr_nav::utils::show_ascii_map;
 use openrr_nav::*;
 use rand::distributions::{Distribution, Uniform};
-use rrt;
 use std::collections::HashMap;
 
 fn new_sample_map() -> GridMap<u8> {

@@ -20,6 +20,6 @@ fn main() {
                 None => print!("-"),
             }
         }
-        println!("");
+        println!();
     }
 }

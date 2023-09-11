@@ -70,7 +70,7 @@ pub fn local_goal_distance_map(
     current_pose: [f64; 2],
 ) -> Result<GridMap<u8>> {
     let len = global_path.len();
-    let nearest = nearest_path_point(global_path.clone(), current_pose).unwrap();
+    let nearest = nearest_path_point(global_path, current_pose).unwrap();
 
     const LOCAL_GOAL_FORWARD_OFFSET: usize = 20;
     let local_goal = global_path[(nearest.0 + LOCAL_GOAL_FORWARD_OFFSET).min(len - 1)].clone();

@@ -239,15 +239,12 @@ fn main() {
                     locked_angle_table
                         .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
                     const FORWARD_OFFSET: usize = 20;
-                    match nearest_path_point {
-                        Some((idx, _)) => {
-                            let look_ahead_idx = (idx + FORWARD_OFFSET).min(len - 1);
-                            locked_angle_table.insert(
-                                PATH_DIRECTION_COST_NAME.to_owned(),
-                                result[look_ahead_idx][2],
-                            );
-                        }
-                        None => {}
+                    if let Some((idx, _)) = nearest_path_point {
+                        let look_ahead_idx = (idx + FORWARD_OFFSET).min(len - 1);
+                        locked_angle_table.insert(
+                            PATH_DIRECTION_COST_NAME.to_owned(),
+                            result[look_ahead_idx][2],
+                        );
                     }
                 }
 

@@ -1,5 +1,4 @@
 use rand::distributions::{Distribution, Uniform};
-use rrt;
 
 fn main() {
     use grid_map::*;
@@ -41,6 +40,6 @@ fn main() {
                 None => print!("-"),
             }
         }
-        println!("");
+        println!();
     }
 }

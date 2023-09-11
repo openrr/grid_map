@@ -138,9 +138,9 @@ impl DwaPlanner {
                 },
             },
             cost_name_weight,
-            controller_dt: *(&config["controller_dt"].as_f64().unwrap()),
-            simulation_duration: *(&config["simulation_duration"].as_f64().unwrap()),
-            num_vel_sample: *(&config["num_vel_sample"].as_i64().unwrap()) as i32,
+            controller_dt: config["controller_dt"].as_f64().unwrap(),
+            simulation_duration: config["simulation_duration"].as_f64().unwrap(),
+            num_vel_sample: config["num_vel_sample"].as_i64().unwrap() as i32,
         })
     }
 
