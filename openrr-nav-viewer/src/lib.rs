@@ -12,63 +12,21 @@ pub mod pb {
     tonic::include_proto!("openrr_nav_viewer");
 }
 
-use std::collections::HashMap;
-
 #[tonic::async_trait]
 impl pb::api_server::Api for NavigationViz {
     async fn get_start_position(
         &self,
         _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<pb::Position>, tonic::Status> {
+    ) -> Result<tonic::Response<pb::Isometry2>, tonic::Status> {
         let start = self.start_position.lock();
-        Ok(tonic::Response::new(pb::Position {
-            x: start.translation.x,
-            y: start.translation.y,
-        }))
+        Ok(tonic::Response::new((*start).into()))
     }
     async fn get_goal_position(
         &self,
         _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<pb::Position>, tonic::Status> {
+    ) -> Result<tonic::Response<pb::Isometry2>, tonic::Status> {
         let goal = self.goal_position.lock();
-        Ok(tonic::Response::new(pb::Position {
-            x: goal.translation.x,
-            y: goal.translation.y,
-        }))
-    }
-    async fn get_planner(
-        &self,
-        _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<pb::DwaPlanner>, tonic::Status> {
-        let planner = self.planner.lock().clone();
-        Ok(tonic::Response::new(pb::DwaPlanner {
-            limits: Some(planner.limits().clone().into()),
-            map_name_weight: planner.map_name_weight().clone(),
-            controller_dt: planner.controller_dt(),
-            simulation_duration: planner.simulation_duration(),
-            num_vel_sample: planner.num_vel_sample(),
-        }))
-    }
-    async fn get_layered_grid_map(
-        &self,
-        request: tonic::Request<pb::GetLayeredGridMapRequest>,
-    ) -> Result<tonic::Response<pb::LayeredGridMap>, tonic::Status> {
-        let names = request.into_inner().names;
-        let mut maps = HashMap::with_capacity(names.len());
-        let layered_grid_map = self.layered_grid_map.lock();
-        for name in names {
-            match layered_grid_map.layer(&name) {
-                Some(map) => {
-                    maps.insert(name, map.into());
-                }
-                None => {
-                    return Err(tonic::Status::invalid_argument(format!(
-                        "grid map '{name}' not found"
-                    )));
-                }
-            }
-        }
-        Ok(tonic::Response::new(pb::LayeredGridMap { maps }))
+        Ok(tonic::Response::new((*goal).into()))
     }
     async fn get_is_run(
         &self,
@@ -113,11 +71,37 @@ impl pb::api_server::Api for NavigationViz {
         }
         Ok(tonic::Response::new(()))
     }
+    async fn set_angle_table(
+        &self,
+        request: tonic::Request<pb::SetAngleTableRequest>,
+    ) -> Result<tonic::Response<()>, tonic::Status> {
+        let pb::SetAngleTableRequest { table } = request.into_inner();
+        let mut angle_table = self.angle_table.lock();
+        for angle in table {
+            angle_table.insert(angle.name, angle.angle);
+        }
+        Ok(tonic::Response::new(()))
+    }
     async fn set_current_pose(
         &self,
         request: tonic::Request<pb::Isometry2>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         *self.robot_pose.lock() = request.into_inner().into();
+        Ok(tonic::Response::new(()))
+    }
+    async fn set_config(
+        &self,
+        request: tonic::Request<pb::Config>,
+    ) -> Result<tonic::Response<()>, tonic::Status> {
+        let text = request.into_inner().text;
+        match openrr_nav::DwaPlanner::new_from_config_text(&text) {
+            Ok(new) => *self.planner.lock() = new,
+            Err(e) => {
+                return Err(tonic::Status::invalid_argument(format!(
+                    "failed to parse config: {e}"
+                )));
+            }
+        }
         Ok(tonic::Response::new(()))
     }
     async fn set_is_run(
@@ -126,6 +110,42 @@ impl pb::api_server::Api for NavigationViz {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         *self.is_run.lock() = request.into_inner().is_run;
         Ok(tonic::Response::new(()))
+    }
+    async fn plan_local_path(
+        &self,
+        request: tonic::Request<pb::PlanRequest>,
+    ) -> Result<tonic::Response<pb::Plan>, tonic::Status> {
+        let pb::PlanRequest {
+            current_pose,
+            current_velocity,
+        } = request.into_inner();
+        let layered_grid_map = self.layered_grid_map.lock();
+        let angle_table = self.angle_table.lock();
+        let planner = self.planner.lock();
+        let plan = planner.plan_local_path(
+            &current_pose.unwrap().into(),
+            &current_velocity.unwrap().into(),
+            &layered_grid_map,
+            &angle_table,
+        );
+        Ok(tonic::Response::new(plan.into()))
+    }
+    async fn predicted_plan_candidates(
+        &self,
+        request: tonic::Request<pb::PlanRequest>,
+    ) -> Result<tonic::Response<pb::Candidates>, tonic::Status> {
+        let pb::PlanRequest {
+            current_pose,
+            current_velocity,
+        } = request.into_inner();
+        let planner = self.planner.lock();
+        let candidates = planner.predicted_plan_candidates(
+            &current_pose.unwrap().into(),
+            &current_velocity.unwrap().into(),
+        );
+        Ok(tonic::Response::new(pb::Candidates {
+            candidates: candidates.into_iter().map(Into::into).collect(),
+        }))
     }
 }
 
@@ -166,44 +186,6 @@ impl From<openrr_nav::Velocity> for pb::Velocity {
         Self {
             x: value.x,
             theta: value.theta,
-        }
-    }
-}
-
-impl From<pb::Acceleration> for openrr_nav::Acceleration {
-    fn from(value: pb::Acceleration) -> Self {
-        Self {
-            x: value.x,
-            theta: value.theta,
-        }
-    }
-}
-impl From<openrr_nav::Acceleration> for pb::Acceleration {
-    fn from(value: openrr_nav::Acceleration) -> Self {
-        Self {
-            x: value.x,
-            theta: value.theta,
-        }
-    }
-}
-
-impl From<pb::Limits> for openrr_nav::Limits {
-    fn from(value: pb::Limits) -> Self {
-        Self {
-            max_velocity: value.max_velocity.unwrap().into(),
-            max_accel: value.max_accel.unwrap().into(),
-            min_velocity: value.min_velocity.unwrap().into(),
-            min_accel: value.min_accel.unwrap().into(),
-        }
-    }
-}
-impl From<openrr_nav::Limits> for pb::Limits {
-    fn from(value: openrr_nav::Limits) -> Self {
-        Self {
-            max_velocity: Some(value.max_velocity.into()),
-            max_accel: Some(value.max_accel.into()),
-            min_velocity: Some(value.min_velocity.into()),
-            min_accel: Some(value.min_accel.into()),
         }
     }
 }

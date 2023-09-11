@@ -5,40 +5,23 @@ package openrr_nav_viewer;
 import "google/protobuf/empty.proto";
 
 service Api {
-  rpc GetStartPosition(google.protobuf.Empty) returns (Position);
-  rpc GetGoalPosition(google.protobuf.Empty) returns (Position);
-  rpc GetPlanner(google.protobuf.Empty) returns (DwaPlanner);
-  rpc GetLayeredGridMap(GetLayeredGridMapRequest) returns (LayeredGridMap);
+  rpc GetStartPosition(google.protobuf.Empty) returns (Isometry2);
+  rpc GetGoalPosition(google.protobuf.Empty) returns (Isometry2);
   rpc GetIsRun(google.protobuf.Empty) returns (IsRun);
   rpc SetGlobalPath(RobotPath) returns (google.protobuf.Empty);
   rpc SetLocalPathAndCandidates(PathAndCandidates) returns (google.protobuf.Empty);
   rpc SetLayeredGridMap(SetLayeredGridMapRequest) returns (google.protobuf.Empty);
+  rpc SetAngleTable(SetAngleTableRequest) returns (google.protobuf.Empty);
   rpc SetCurrentPose(Isometry2) returns (google.protobuf.Empty);
+  rpc SetConfig(Config) returns (google.protobuf.Empty);
   rpc SetIsRun(IsRun) returns (google.protobuf.Empty);
+  rpc PlanLocalPath(PlanRequest) returns (Plan);
+  rpc PredictedPlanCandidates(PlanRequest) returns (Candidates);
 }
 
-message Position {
-  double x = 1;
-  double y = 2;
-}
-
-message Limits {
-  Velocity max_velocity = 1;
-  Acceleration max_accel = 2;
-  Velocity min_velocity = 3;
-  Acceleration min_accel = 4;
-}
-
-message DwaPlanner {
-  Limits limits = 1;
-  map<string, double> map_name_weight = 2;
-  double controller_dt = 3;
-  double simulation_duration = 4;
-  int32 num_vel_sample = 5;
-}
-
-message GetLayeredGridMapRequest {
-  repeated string names = 1;
+// TODO: use structured config?
+message Config {
+  string text = 1;
 }
 
 message SetLayeredGridMapRequest {
@@ -48,10 +31,6 @@ message SetLayeredGridMapRequest {
 message NamedGridMap {
   string name = 1;
   GridMap map = 2;
-}
-
-message LayeredGridMap {
-  map<string, GridMap> maps = 1;
 }
 
 message GridMap {
@@ -64,6 +43,11 @@ message GridPositionConverter {
   Position min_point = 2;
   Position max_point = 3;
   Size size = 4;
+}
+
+message Position {
+  double x = 1;
+  double y = 2;
 }
 
 message Size {
@@ -81,6 +65,15 @@ message Cell {
   }
 }
 
+message SetAngleTableRequest {
+  repeated NamedAngle table = 1;
+}
+
+message NamedAngle {
+  string name = 1;
+  double angle = 2;
+}
+
 message IsRun {
   bool is_run = 1;
 }
@@ -94,6 +87,15 @@ message PathAndCandidates {
   repeated Plan candidates = 2;
 }
 
+message PlanRequest {
+  Isometry2 current_pose = 1;
+  Velocity current_velocity = 2;
+}
+
+message Candidates {
+  repeated Plan candidates = 1;
+}
+
 message Plan {
   Velocity velocity = 1;
   double cost = 2;
@@ -101,11 +103,6 @@ message Plan {
 }
 
 message Velocity {
-  double x = 1;
-  double theta = 2;
-}
-
-message Acceleration {
   double x = 1;
   double theta = 2;
 }
