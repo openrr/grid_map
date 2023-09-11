@@ -101,7 +101,11 @@ impl DwaPlanner {
 
     pub fn new_from_config(path: impl AsRef<Path>) -> Result<Self, Error> {
         let source = fs::read_to_string(path).unwrap();
-        let yaml_config = yaml_rust::YamlLoader::load_from_str(&source).unwrap();
+        Self::new_from_config_text(&source)
+    }
+
+    pub fn new_from_config_text(source: &str) -> Result<Self, Error> {
+        let yaml_config = yaml_rust::YamlLoader::load_from_str(source).unwrap();
         let config = &yaml_config[0]["DwaPlanner"];
 
         let max_vel = &config["limits"]["max_velocity"].as_vec().unwrap();

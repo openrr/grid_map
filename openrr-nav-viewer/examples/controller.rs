@@ -1,86 +1,36 @@
 // How to run:
+//
 // ```sh
 // # start viewer
-// cargo run -p openrr-nav-viewer
+// cargo run --release -p openrr-nav-viewer
 // # start controller example
-// cargo run -p openrr-nav-viewer --example controller
+// cargo run --release -p openrr-nav-viewer --example controller
 // ```
 
-use std::collections::HashMap;
+mod shared;
 
 use anyhow::Result;
 use grid_map::*;
-use nalgebra as na;
-use openrr_nav::*;
-use openrr_nav_viewer::pb;
+use openrr_nav::{utils::nearest_path_point, *};
+use openrr_nav_viewer::*;
 use rand::distributions::{Distribution, Uniform};
+use shared::*;
 
 const ENDPOINT: &str = "http://[::1]:50101";
 
-pub const PATH_DISTANCE_MAP_NAME: &str = "path";
-pub const GOAL_DISTANCE_MAP_NAME: &str = "goal";
-pub const OBSTACLE_DISTANCE_MAP_NAME: &str = "obstacle";
-pub const DEFAULT_PATH_DISTANCE_WEIGHT: f64 = 0.8;
-pub const DEFAULT_GOAL_DISTANCE_WEIGHT: f64 = 0.9;
-pub const DEFAULT_OBSTACLE_DISTANCE_WEIGHT: f64 = 0.3;
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut c = pb::api_client::ApiClient::connect(ENDPOINT).await?;
+    let mut api = pb::api_client::ApiClient::connect(ENDPOINT).await?;
+    api.set_config(pb::Config {
+        text: std::fs::read_to_string(format!(
+            "{}/../openrr-nav/config/dwa_parameter_config.yaml",
+            env!("CARGO_MANIFEST_DIR")
+        ))?,
+    })
+    .await?;
     loop {
-        controller(&mut c).await?
+        controller(&mut api).await?
     }
-}
-
-fn new_sample_map() -> GridMap<u8> {
-    let mut map =
-        grid_map::GridMap::<u8>::new(Position::new(-1.05, -1.05), Position::new(3.05, 1.05), 0.05);
-    for i in 10..50 {
-        map.set_obstacle(&Grid::new(i + 10, 5)).unwrap();
-        map.set_obstacle(&Grid::new(i + 10, 6)).unwrap();
-        for j in 20..30 {
-            map.set_obstacle(&Grid::new(i, j)).unwrap();
-        }
-    }
-    map
-}
-
-fn robot_path_from_vec_vec(path: &[Vec<f64>]) -> RobotPath {
-    let mut robot_path_inner = vec![];
-    for p in path {
-        let pose = na::Isometry2::new(na::Vector2::new(p[0], p[1]), 0.);
-
-        robot_path_inner.push(pose);
-    }
-    RobotPath(robot_path_inner)
-}
-
-fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f64>> {
-    if path.len() < 2 {
-        return path;
-    }
-    let mut interpolated_path = vec![];
-    interpolated_path.push(path.first().unwrap().clone());
-    for (p0, p1) in path.iter().zip(path.iter().skip(1)) {
-        let diff_x = p1[0] - p0[0];
-        let diff_y = p1[1] - p0[1];
-        let diff = (diff_x.powi(2) + diff_y.powi(2)).sqrt();
-        let interpolate_num = (diff / extend_length) as usize;
-        if interpolate_num > 0 {
-            let unit_diff_x = diff_x / interpolate_num as f64;
-            let unit_diff_y = diff_y / interpolate_num as f64;
-            for j in 1..interpolate_num {
-                interpolated_path.push(vec![
-                    p0[0] + unit_diff_x * j as f64,
-                    p0[1] + unit_diff_y * j as f64,
-                ]);
-            }
-        } else {
-            interpolated_path.push(p0.to_owned());
-        }
-    }
-    interpolated_path.push(path.last().unwrap().clone());
-    interpolated_path
 }
 
 async fn controller(
@@ -92,10 +42,18 @@ async fn controller(
     let mut map = new_sample_map();
     let x_range = Uniform::new(map.min_point().x, map.max_point().x);
     let y_range = Uniform::new(map.min_point().y, map.max_point().y);
-    let start = api.get_start_position(()).await?.into_inner();
-    let start = [start.x, start.y];
-    let goal = api.get_goal_position(()).await?.into_inner();
-    let goal = [goal.x, goal.y];
+    let start = Pose::from(api.get_start_position(()).await?.into_inner());
+    let start = [
+        start.translation.x,
+        start.translation.y,
+        start.rotation.angle(),
+    ];
+    let goal = Pose::from(api.get_goal_position(()).await?.into_inner());
+    let goal = [
+        goal.translation.x,
+        goal.translation.y,
+        goal.rotation.angle(),
+    ];
     let is_free = |p: &[f64]| {
         !matches!(
             map.cell(&map.to_grid(p[0], p[1]).unwrap()).unwrap(),
@@ -104,27 +62,29 @@ async fn controller(
     };
     const EXTEND_LENGTH: f64 = 0.05;
     let mut result = rrt::dual_rrt_connect(
-        &start,
-        &goal,
+        &[start[0], start[1]],
+        &[goal[0], goal[1]],
         is_free,
         || {
             let mut rng = rand::thread_rng();
             vec![x_range.sample(&mut rng), y_range.sample(&mut rng)]
         },
-        0.05,
-        1000,
+        EXTEND_LENGTH,
+        4000,
     )
     .unwrap();
     rrt::smooth_path(&mut result, is_free, EXTEND_LENGTH, 1000);
     let result = linear_interpolate_path(result, EXTEND_LENGTH);
-    api.set_global_path(pb::RobotPath::from(robot_path_from_vec_vec(&result)))
+    let result =
+        add_target_position_to_path(result, &Pose::new(Vector2::new(goal[0], goal[1]), goal[2]));
+    api.set_global_path(pb::RobotPath::from(robot_path_from_vec_vec(result.clone())))
         .await?;
     let path_grid = result
         .iter()
         .map(|p| map.to_grid(p[0], p[1]).unwrap())
         .collect::<Vec<_>>();
 
-    for p in result {
+    for p in &result {
         map.set_value(&map.to_grid(p[0], p[1]).unwrap(), 0).unwrap();
     }
 
@@ -134,6 +94,9 @@ async fn controller(
     let goal_distance_map = goal_distance_map(&map, &goal_grid).unwrap();
 
     let obstacle_distance_map = obstacle_distance_map(&map).unwrap();
+
+    let local_goal_distance_map =
+        local_goal_distance_map(&map, &result, [start[0], start[1]]).unwrap();
 
     api.set_layered_grid_map(pb::SetLayeredGridMapRequest {
         maps: vec![
@@ -149,56 +112,132 @@ async fn controller(
                 name: OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
                 map: Some((&obstacle_distance_map).into()),
             },
+            pb::NamedGridMap {
+                name: LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                map: Some((&local_goal_distance_map).into()),
+            },
         ],
     })
     .await?;
-    let planner = api.get_planner(()).await?.into_inner();
-    let planner = DwaPlanner::new(
-        planner.limits.unwrap().into(),
-        planner.map_name_weight,
-        planner.controller_dt,
-        planner.simulation_duration,
-        planner.num_vel_sample,
-    );
 
-    let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), 0.0);
-    let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), 0.0);
+    api.set_angle_table(pb::SetAngleTableRequest {
+        table: vec![
+            pb::NamedAngle {
+                name: ROTATION_COST_NAME.to_owned(),
+                angle: start[2],
+            },
+            pb::NamedAngle {
+                name: PATH_DIRECTION_COST_NAME.to_owned(),
+                angle: start[2],
+            },
+            pb::NamedAngle {
+                name: GOAL_DIRECTION_COST_NAME.to_owned(),
+                angle: goal[2],
+            },
+        ],
+    })
+    .await?;
+
+    let mut current_pose = Pose::new(Vector2::new(start[0], start[1]), start[2]);
+    let goal_pose = Pose::new(Vector2::new(goal[0], goal[1]), goal[2]);
 
     let mut current_velocity = Velocity { x: 0.0, theta: 0.0 };
     let mut plan_map = map.clone();
 
-    let angles = HashMap::new();
+    for i in 0..300 {
+        // let dynamic_map = new_dynamic_sample_map(i);
+        let dynamic_map = new_sample_map();
+        let path_distance_map = openrr_nav::path_distance_map(&dynamic_map, &path_grid).unwrap();
 
-    for i in 0..100 {
-        let (plan, candidates) = {
-            let layered_grid_map = api
-                .get_layered_grid_map(pb::GetLayeredGridMapRequest {
-                    names: planner.map_names().cloned().collect(),
-                })
-                .await?
-                .into_inner()
-                .maps
-                .into_iter()
-                .map(|(k, v)| (k, v.into()))
-                .collect();
-            (
-                planner.plan_local_path(
-                    &current_pose,
-                    &current_velocity,
-                    &LayeredGridMap::new(layered_grid_map),
-                    &angles,
-                ),
-                planner.predicted_plan_candidates(&current_pose, &current_velocity),
-            )
-        };
-        api.set_local_path_and_candidates(pb::PathAndCandidates {
-            path: Some(RobotPath(plan.path.clone()).into()),
-            candidates: candidates.into_iter().map(Into::into).collect(),
+        let goal_grid = map.to_grid(goal[0], goal[1]).unwrap();
+        let goal_distance_map = openrr_nav::goal_distance_map(&dynamic_map, &goal_grid).unwrap();
+
+        let obstacle_distance_map = openrr_nav::obstacle_distance_map(&dynamic_map).unwrap();
+
+        let local_goal_distance_map = openrr_nav::local_goal_distance_map(
+            &map,
+            &result,
+            [current_pose.translation.x, current_pose.translation.y],
+        )
+        .unwrap();
+
+        api.set_layered_grid_map(pb::SetLayeredGridMapRequest {
+            maps: vec![
+                pb::NamedGridMap {
+                    name: PATH_DISTANCE_MAP_NAME.to_owned(),
+                    map: Some((&path_distance_map).into()),
+                },
+                pb::NamedGridMap {
+                    name: GOAL_DISTANCE_MAP_NAME.to_owned(),
+                    map: Some((&goal_distance_map).into()),
+                },
+                pb::NamedGridMap {
+                    name: OBSTACLE_DISTANCE_MAP_NAME.to_owned(),
+                    map: Some((&obstacle_distance_map).into()),
+                },
+                pb::NamedGridMap {
+                    name: LOCAL_GOAL_DISTANCE_MAP_NAME.to_owned(),
+                    map: Some((&local_goal_distance_map).into()),
+                },
+            ],
         })
         .await?;
 
-        current_velocity = plan.velocity;
-        current_pose = plan.path[0];
+        {
+            let nearest_path_point = nearest_path_point(
+                &result,
+                [current_pose.translation.x, current_pose.translation.y],
+            );
+            let len = result.len();
+            let mut table = vec![pb::NamedAngle {
+                name: ROTATION_COST_NAME.to_owned(),
+                angle: current_pose.rotation.angle(),
+            }];
+            const FORWARD_OFFSET: usize = 20;
+            if let Some((idx, _)) = nearest_path_point {
+                let look_ahead_idx = (idx + FORWARD_OFFSET).min(len - 1);
+                table.push(pb::NamedAngle {
+                    name: PATH_DIRECTION_COST_NAME.to_owned(),
+                    angle: result[look_ahead_idx][2],
+                });
+            }
+            api.set_angle_table(pb::SetAngleTableRequest { table })
+                .await?;
+        }
+
+        // TODO: move them into viewer side?
+        let (plan, candidates) = {
+            (
+                api.plan_local_path(pb::PlanRequest {
+                    current_pose: Some(current_pose.into()),
+                    current_velocity: Some(current_velocity.into()),
+                })
+                .await?
+                .into_inner(),
+                api.predicted_plan_candidates(pb::PlanRequest {
+                    current_pose: Some(current_pose.into()),
+                    current_velocity: Some(current_velocity.into()),
+                })
+                .await?
+                .into_inner()
+                .candidates,
+            )
+        };
+        api.set_local_path_and_candidates(pb::PathAndCandidates {
+            path: Some(pb::RobotPath {
+                path: plan.path.clone(),
+            }),
+            candidates,
+        })
+        .await?;
+
+        current_velocity = plan.velocity.unwrap().into();
+        current_pose = plan
+            .path
+            .get(0)
+            .cloned()
+            .map(Into::into)
+            .unwrap_or_default();
 
         api.set_current_pose(pb::Isometry2::from(current_pose))
             .await?;
@@ -211,8 +250,12 @@ async fn controller(
             println!("OUT OF MAP!");
             return Ok(());
         }
-        const GOAL_THRESHOLD: f64 = 0.1;
-        if (goal_pose.translation.vector - current_pose.translation.vector).norm() < GOAL_THRESHOLD
+        const GOAL_THRESHOLD_DISTANCE: f64 = 0.1;
+        const GOAL_THRESHOLD_ANGLE_DIFFERENCE: f64 = 0.4;
+        if (goal_pose.translation.vector - current_pose.translation.vector).norm()
+            < GOAL_THRESHOLD_DISTANCE
+            && (goal_pose.rotation.angle() - current_pose.rotation.angle()).abs()
+                < GOAL_THRESHOLD_ANGLE_DIFFERENCE
         {
             println!("GOAL! count = {i}");
             break;
