@@ -24,7 +24,7 @@ pub fn show_ascii_map(map: &grid_map::GridMap<u8>, scale: f32) {
 
 pub fn nearest_path_point(path: &[Vec<f64>], target_point: [f64; 2]) -> Option<(usize, Vec<f64>)> {
     if path.is_empty() {
-        return None;
+        None
     } else {
         let mut nearest = (0, f64::MAX);
         for (i, p) in path.iter().enumerate() {
