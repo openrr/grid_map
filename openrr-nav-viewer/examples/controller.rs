@@ -37,6 +37,7 @@ async fn controller(
     api: &mut openrr_nav_viewer::pb::api_client::ApiClient<tonic::transport::Channel>,
 ) -> Result<()> {
     if !api.get_is_run(()).await?.into_inner().is_run {
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         return Ok(());
     }
     let mut map = new_sample_map();
