@@ -1,4 +1,4 @@
-use nalgebra::Isometry2;
+use arci::nalgebra::Isometry2;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]

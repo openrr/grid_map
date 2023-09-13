@@ -7,7 +7,7 @@ use bevy_egui::{
     },
     EguiContexts, EguiPlugin,
 };
-use nalgebra::Vector2;
+use arci::nalgebra::Vector2;
 use openrr_nav::Pose;
 
 use crate::*;

@@ -1,5 +1,5 @@
 use grid_map::*;
-use nalgebra as na;
+use arci::nalgebra as na;
 use openrr_nav::*;
 
 pub fn new_sample_map() -> GridMap<u8> {

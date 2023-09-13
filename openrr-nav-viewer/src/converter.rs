@@ -4,7 +4,7 @@ use bevy_egui::egui::{
     Color32,
 };
 use grid_map::*;
-use nalgebra as na;
+use arci::nalgebra as na;
 use openrr_nav::*;
 
 pub fn grid_map_to_polygon(grid_map: &GridMap<u8>) -> Vec<Polygon> {
