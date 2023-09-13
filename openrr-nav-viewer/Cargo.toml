@@ -24,3 +24,4 @@ tokio = { version = "1", features = ["full"] }
 rand = "0.8"
 rrt = "0.7"
 anyhow = "1"
+arci-urdf-viz = "0.1"

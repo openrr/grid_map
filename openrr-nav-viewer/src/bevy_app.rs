@@ -1,3 +1,4 @@
+use arci::nalgebra::Vector2;
 use bevy::prelude::*;
 use bevy_egui::{
     egui::{
@@ -7,7 +8,6 @@ use bevy_egui::{
     },
     EguiContexts, EguiPlugin,
 };
-use arci::nalgebra::Vector2;
 use openrr_nav::Pose;
 
 use crate::*;
