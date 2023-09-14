@@ -1,26 +1,27 @@
 [package]
 name = "openrr-nav-viewer"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tonic-build = "0.9"
+tonic-build.workspace = true
 
 [dependencies]
-bevy = "0.11"
-bevy_egui = "0.21"
-nalgebra = "0.32"
-parking_lot = "0.12"
-grid_map = { path = "../grid_map" }
-openrr-nav = { path = "../openrr-nav" }
-prost = "0.11"
-prost-types = "0.11"
-tonic = "0.9"
-tokio = { version = "1", features = ["full"] }
+bevy_egui.workspace = true
+bevy.workspace = true
+grid_map.workspace = true
+nalgebra.workspace = true
+openrr-nav.workspace = true
+parking_lot.workspace = true
+prost-types.workspace = true
+prost.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tonic.workspace = true
 
 [dev-dependencies]
-rand = "0.8"
-rrt = "0.7"
-anyhow = "1"
+anyhow.workspace = true
+rand.workspace = true
+rrt.workspace = true

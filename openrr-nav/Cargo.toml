@@ -1,19 +1,20 @@
 [package]
 name = "openrr-nav"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nalgebra = "0.32"
-grid_map = "0.1"
-arci = "0.1"
-thiserror = "1"
-parking_lot = "0.12"
-yaml-rust ="0.4"
+arci.workspace = true
+grid_map.workspace = true
+nalgebra.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+yaml-rust.workspace = true
 
 [dev-dependencies]
-rand = "0.8"
-rrt = "0.7"
-bevy = "0.11"
+bevy.workspace = true
+rand.workspace = true
+rrt.workspace = true
