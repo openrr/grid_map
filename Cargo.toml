@@ -5,6 +5,7 @@ members = ["grid_map", "openrr-nav", "openrr-nav-viewer"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 repository = "https://github.com/openrr/grid_map"
 
 [workspace.dependencies]
