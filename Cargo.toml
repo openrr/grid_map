@@ -2,8 +2,35 @@
 resolver = "2"
 members = ["grid_map", "openrr-nav", "openrr-nav-viewer"]
 
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/openrr/grid_map"
+
+[workspace.dependencies]
+grid_map = "0.1"
+openrr-nav = "0.1"
+
+anyhow = "1"
+arci = "0.1"
+bevy = "0.11"
+bevy_egui = "0.21"
+image = "0.24"
+nalgebra = "0.32"
+parking_lot = "0.12"
+prost = "0.11"
+prost-types = "0.11"
+rand = "0.8"
+rrt = "0.7"
+thiserror = "1"
+tokio = "1"
+tonic = "0.9"
+tonic-build = "0.9"
+yaml-rust = "0.4"
+
 [patch.crates-io]
 grid_map = { path = "grid_map" }
+openrr-nav = { path = "openrr-nav" }
 
 [profile.release]
 debug = true
