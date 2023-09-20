@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    winit::{UpdateMode, WinitSettings},
+};
 use bevy_egui::{
     egui::{
         self,
@@ -98,11 +101,25 @@ impl BevyAppNav {
         let ui_checkboxes = UiCheckboxes::default();
         let displayed_arrows = DisplayedArrows::default();
 
+        // Refs:
+        // - https://github.com/bevyengine/bevy/blob/HEAD/examples/window/low_power.rs
+        // - https://docs.rs/bevy/latest/bevy/winit/enum.UpdateMode.html
+        let winit_settings = WinitSettings {
+            focused_mode: UpdateMode::Reactive {
+                max_wait: std::time::Duration::from_secs_f64(1.0 / 20.0), // 20Hz,
+            },
+            unfocused_mode: UpdateMode::Reactive {
+                max_wait: std::time::Duration::from_secs_f64(1.0 / 20.0), // 20Hz,
+            },
+            ..Default::default()
+        };
+
         self.app
             .insert_resource(nav)
             .insert_resource(map_type)
             .insert_resource(ui_checkboxes)
             .insert_resource(displayed_arrows)
+            .insert_resource(winit_settings)
             .add_plugins(user_plugin)
             .add_plugins(EguiPlugin)
             .add_systems(Update, ui_system)
