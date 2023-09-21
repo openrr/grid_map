@@ -6,6 +6,8 @@ use std::{collections::HashMap, fs, path::Path};
 
 use crate::Error;
 
+mod serde_cost_name_weight;
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, from = "[f64; 2]", into = "[f64; 2]")]
 pub struct Velocity {
@@ -84,6 +86,7 @@ pub struct Limits {
 /// DWA Planner
 pub struct DwaPlanner {
     limits: Limits,
+    #[serde(with = "serde_cost_name_weight")]
     cost_name_weight: HashMap<String, f64>,
     controller_dt: f64,
     simulation_duration: f64,
