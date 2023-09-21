@@ -69,10 +69,12 @@ pub struct Plan {
 pub struct Limits {
     /// plus limit of the velocity
     pub max_velocity: Velocity,
+    #[serde(rename = "max_acceleration")]
     /// plus limit of the acceleration
     pub max_accel: Acceleration,
     /// minus limit of the velocity (like -0.5)
     pub min_velocity: Velocity,
+    #[serde(rename = "min_acceleration")]
     /// minus limit of the acceleration (like -1.0)
     pub min_accel: Acceleration,
 }
