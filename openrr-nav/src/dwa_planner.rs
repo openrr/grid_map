@@ -320,6 +320,11 @@ mod tests {
     }
 
     #[test]
+    fn new_from_config_test() {
+        let _ = DwaPlanner::new_from_config("config/dwa_parameter_config.yaml").unwrap();
+    }
+
+    #[test]
     fn dwa_planner_test() {
         use rand::distributions::{Distribution, Uniform};
         use rrt;
