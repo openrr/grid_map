@@ -14,6 +14,8 @@ nalgebra.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 yaml-rust.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
 
 [dev-dependencies]
 bevy.workspace = true

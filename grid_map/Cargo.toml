@@ -11,6 +11,8 @@ repository.workspace = true
 image.workspace = true
 thiserror.workspace = true
 yaml-rust.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
