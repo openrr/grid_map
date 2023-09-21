@@ -13,7 +13,6 @@ grid_map.workspace = true
 nalgebra.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
-yaml-rust.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 
