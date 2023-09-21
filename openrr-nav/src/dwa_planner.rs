@@ -7,7 +7,7 @@ use std::{collections::HashMap, fs, path::Path};
 use crate::Error;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-#[serde(from = "[f64; 2]", into = "[f64; 2]")]
+#[serde(deny_unknown_fields, from = "[f64; 2]", into = "[f64; 2]")]
 pub struct Velocity {
     pub x: f64,
     pub theta: f64,
@@ -29,7 +29,7 @@ impl From<Velocity> for [f64; 2] {
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-#[serde(from = "[f64; 2]", into = "[f64; 2]")]
+#[serde(deny_unknown_fields, from = "[f64; 2]", into = "[f64; 2]")]
 pub struct Acceleration {
     pub x: f64,
     pub theta: f64,
@@ -64,6 +64,7 @@ pub struct Plan {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// Velocity and acceleration limitations of the robot
 pub struct Limits {
     /// plus limit of the velocity
@@ -77,6 +78,7 @@ pub struct Limits {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// DWA Planner
 pub struct DwaPlanner {
     limits: Limits,
@@ -87,6 +89,7 @@ pub struct DwaPlanner {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct DwaPlannerConfig {
     #[serde(rename = "DwaPlanner")]
     dwa_planner: DwaPlanner,
