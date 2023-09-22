@@ -10,7 +10,6 @@ repository.workspace = true
 [dependencies]
 image.workspace = true
 thiserror.workspace = true
-yaml-rust.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 
