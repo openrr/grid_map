@@ -1,20 +1,55 @@
 use grid_map::{Cell, GridMap, LayeredGridMap, Position};
 pub use na::Vector2;
 use nalgebra as na;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::Path};
 
 use crate::Error;
 
-#[derive(Debug, Clone, Copy, Default)]
+mod serde_cost_name_weight;
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, from = "[f64; 2]", into = "[f64; 2]")]
 pub struct Velocity {
     pub x: f64,
     pub theta: f64,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+impl From<[f64; 2]> for Velocity {
+    fn from(value: [f64; 2]) -> Self {
+        Self {
+            x: value[0],
+            theta: value[1],
+        }
+    }
+}
+
+impl From<Velocity> for [f64; 2] {
+    fn from(value: Velocity) -> Self {
+        [value.x, value.theta]
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, from = "[f64; 2]", into = "[f64; 2]")]
 pub struct Acceleration {
     pub x: f64,
     pub theta: f64,
+}
+
+impl From<[f64; 2]> for Acceleration {
+    fn from(value: [f64; 2]) -> Self {
+        Self {
+            x: value[0],
+            theta: value[1],
+        }
+    }
+}
+
+impl From<Acceleration> for [f64; 2] {
+    fn from(value: Acceleration) -> Self {
+        [value.x, value.theta]
+    }
 }
 
 pub type Pose = na::Isometry2<f64>;
@@ -30,27 +65,39 @@ pub struct Plan {
     pub path: Vec<Pose>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// Velocity and acceleration limitations of the robot
 pub struct Limits {
     /// plus limit of the velocity
     pub max_velocity: Velocity,
+    #[serde(rename = "max_acceleration")]
     /// plus limit of the acceleration
     pub max_accel: Acceleration,
     /// minus limit of the velocity (like -0.5)
     pub min_velocity: Velocity,
+    #[serde(rename = "min_acceleration")]
     /// minus limit of the acceleration (like -1.0)
     pub min_accel: Acceleration,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 /// DWA Planner
 pub struct DwaPlanner {
     limits: Limits,
+    #[serde(with = "serde_cost_name_weight")]
     cost_name_weight: HashMap<String, f64>,
     controller_dt: f64,
     simulation_duration: f64,
     num_vel_sample: i32,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DwaPlannerConfig {
+    #[serde(rename = "DwaPlanner")]
+    dwa_planner: DwaPlanner,
 }
 
 fn accumulate_values_by_positions(map: &GridMap<u8>, positions: &[Position]) -> f64 {
@@ -105,47 +152,9 @@ impl DwaPlanner {
     }
 
     pub fn new_from_config_text(source: &str) -> Result<Self, Error> {
-        let yaml_config = yaml_rust::YamlLoader::load_from_str(source).unwrap();
-        let config = &yaml_config[0]["DwaPlanner"];
-
-        let max_vel = &config["limits"]["max_velocity"].as_vec().unwrap();
-        let max_acc = &config["limits"]["max_acceleration"].as_vec().unwrap();
-        let min_vel = &config["limits"]["min_velocity"].as_vec().unwrap();
-        let min_acc = &config["limits"]["min_acceleration"].as_vec().unwrap();
-
-        let cost_name_weight_from_config = &config["cost_name_weight"].as_vec().unwrap();
-        let mut cost_name_weight = HashMap::new();
-        for m in cost_name_weight_from_config.iter() {
-            cost_name_weight.insert(
-                m["name"].as_str().unwrap().to_owned(),
-                m["value"].as_f64().unwrap().to_owned(),
-            );
-        }
-
-        Ok(Self {
-            limits: Limits {
-                max_velocity: Velocity {
-                    x: max_vel[0].as_f64().unwrap(),
-                    theta: max_vel[1].as_f64().unwrap(),
-                },
-                max_accel: Acceleration {
-                    x: max_acc[0].as_f64().unwrap(),
-                    theta: max_acc[1].as_f64().unwrap(),
-                },
-                min_velocity: Velocity {
-                    x: min_vel[0].as_f64().unwrap(),
-                    theta: min_vel[1].as_f64().unwrap(),
-                },
-                min_accel: Acceleration {
-                    x: min_acc[0].as_f64().unwrap(),
-                    theta: min_acc[1].as_f64().unwrap(),
-                },
-            },
-            cost_name_weight,
-            controller_dt: config["controller_dt"].as_f64().unwrap(),
-            simulation_duration: config["simulation_duration"].as_f64().unwrap(),
-            num_vel_sample: config["num_vel_sample"].as_i64().unwrap() as i32,
-        })
+        use serde_yaml::from_str;
+        let config: DwaPlannerConfig = from_str(source).map_err(grid_map::Error::from)?;
+        Ok(config.dwa_planner)
     }
 
     pub fn update_params_from_config(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
@@ -313,6 +322,11 @@ mod tests {
             }
         }
         map
+    }
+
+    #[test]
+    fn new_from_config_test() {
+        let _ = DwaPlanner::new_from_config("config/dwa_parameter_config.yaml").unwrap();
     }
 
     #[test]

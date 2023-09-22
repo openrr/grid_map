@@ -10,6 +10,8 @@ pub enum Error {
     ImageError(#[from] image::ImageError),
     #[error("yaml scan error: {0}")]
     YamlScanError(#[from] yaml_rust::ScanError),
+    #[error("yaml parse error: {0}")]
+    YamlParseError(#[from] serde_yaml::Error),
     #[error("out of range grid: {0:?}")]
     OutOfRangeGrid(Grid),
     #[error("out of range {0}, {1}")]
