@@ -4,36 +4,26 @@ use crate::grid_map::GridMap;
 use crate::position::Position;
 
 use image::io::Reader;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
-use yaml_rust::YamlLoader;
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+struct Pgm {
+    #[serde(rename = "image")]
+    path: String,
+    origin: [f64; 3],
+    resolution: f64,
+}
 
 pub fn load_ros_yaml<P: AsRef<Path>>(yaml_path: P) -> Result<GridMap<u8>, Error> {
     let yaml_str = std::fs::read_to_string(yaml_path)?;
-    let docs = YamlLoader::load_from_str(&yaml_str)?;
-    let doc = &docs[0];
-    let pgm_path = doc["image"]
-        .as_str()
-        .ok_or(Error::Other("Failed to load yaml: [image]".to_string()))?;
-    let origin = doc["origin"]
-        .as_vec()
-        .ok_or(Error::Other("Failed to load yaml: [origin]".to_string()))?;
-    let origin_x = origin[0].as_f64().ok_or(Error::Other(
-        "Failed to load yaml: parse origin x".to_string(),
-    ))?;
-    let origin_y = origin[1].as_f64().ok_or(Error::Other(
-        "Failed to load yaml: parse origin y".to_string(),
-    ))?;
-    let resolution = doc["resolution"].as_f64().ok_or(Error::Other(
-        "Failed to load yaml: [resolution]".to_string(),
-    ))?;
-    load_pgm(
-        pgm_path,
-        Position {
-            x: origin_x,
-            y: origin_y,
-        },
+    let Pgm {
+        path,
+        origin,
         resolution,
-    )
+    } = serde_yaml::from_str(&yaml_str)?;
+    let origin = Position::new(origin[0], origin[1]);
+    load_pgm(path, origin, resolution)
 }
 
 pub fn load_pgm<P: AsRef<Path>>(
