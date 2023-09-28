@@ -6,10 +6,6 @@ struct Args {
     #[clap(
         short = 'f',
         long = "config-file",
-        default_value = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../openrr-nav/config/dwa_parameter_config.yaml"
-        ),
         env = "PLANNER_CONFIG_PATH",
         help = "planner config file path"
     )]
