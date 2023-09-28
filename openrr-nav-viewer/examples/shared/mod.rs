@@ -1,6 +1,31 @@
+use clap::Parser;
 use grid_map::*;
 use nalgebra as na;
 use openrr_nav::*;
+use openrr_nav_viewer::NavigationViz;
+
+#[derive(Debug, Parser)]
+pub struct Args {
+    #[clap(
+        short = 'f',
+        long = "config-file",
+        default_value = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../openrr-nav/config/dwa_parameter_config.yaml"
+        ),
+        env = "PLANNER_CONFIG_PATH",
+        help = "planner config file path"
+    )]
+    pub planner_config_path: String,
+}
+
+impl TryFrom<Args> for NavigationViz {
+    type Error = openrr_nav::Error;
+
+    fn try_from(value: Args) -> openrr_nav::Result<Self> {
+        NavigationViz::new(&value.planner_config_path)
+    }
+}
 
 pub fn new_sample_map() -> GridMap<u8> {
     let mut map =

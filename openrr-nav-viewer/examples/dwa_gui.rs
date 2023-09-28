@@ -6,6 +6,7 @@
 
 mod shared;
 
+use clap::Parser;
 use grid_map::*;
 use openrr_nav::{utils::nearest_path_point, *};
 use openrr_nav_viewer::*;
@@ -13,7 +14,7 @@ use rand::distributions::{Distribution, Uniform};
 use shared::*;
 
 fn main() {
-    let nav = NavigationViz::default();
+    let nav: NavigationViz = Args::parse().try_into().unwrap();
 
     let cloned_nav = nav.clone();
 
