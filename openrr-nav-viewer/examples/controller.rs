@@ -4,7 +4,7 @@
 // # start viewer
 // cargo run --release -p openrr-nav-viewer
 // # start controller example
-// cargo run --release -p openrr-nav-viewer --example controller
+// cargo run --release -p openrr-nav-viewer --example controller -- -f openrr-nav/config/dwa_parameter_config.yaml
 // ```
 
 mod shared;
