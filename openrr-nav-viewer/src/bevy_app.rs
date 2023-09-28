@@ -456,13 +456,7 @@ fn ui_system(
                 .add_sized([200., 30.], egui::Button::new("Reload planner config"))
                 .clicked()
             {
-                let mut planner = res_nav.planner.lock();
-                planner
-                    .update_params_from_config(format!(
-                        "{}/../openrr-nav/config/dwa_parameter_config.yaml",
-                        env!("CARGO_MANIFEST_DIR")
-                    ))
-                    .unwrap();
+                res_nav.reload_planner().unwrap();
             }
         });
 }
