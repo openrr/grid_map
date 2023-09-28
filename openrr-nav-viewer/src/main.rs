@@ -1,7 +1,27 @@
+use clap::Parser;
 use openrr_nav_viewer::*;
 
+#[derive(Debug, Parser)]
+struct Args {
+    #[clap(
+        short = 'f',
+        long = "config-file",
+        env = "PLANNER_CONFIG_PATH",
+        help = "planner config file path"
+    )]
+    pub planner_config_path: String,
+}
+
+impl TryFrom<Args> for NavigationViz {
+    type Error = openrr_nav::Error;
+
+    fn try_from(value: Args) -> Result<Self, Self::Error> {
+        NavigationViz::new(&value.planner_config_path)
+    }
+}
+
 fn main() {
-    let nav = NavigationViz::default();
+    let nav: NavigationViz = Args::parse().try_into().unwrap();
 
     let cloned_nav = nav.clone();
     let h = std::thread::spawn(|| {

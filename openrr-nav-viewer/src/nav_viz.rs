@@ -14,11 +14,13 @@ pub struct NavigationViz {
     pub start_position: Arc<Mutex<Pose>>,
     pub goal_position: Arc<Mutex<Pose>>,
     pub planner: Arc<Mutex<DwaPlanner>>,
+    planner_config_path: String,
 }
 
-impl Default for NavigationViz {
-    fn default() -> Self {
-        Self {
+impl NavigationViz {
+    pub fn new(planner_config_path: &str) -> openrr_nav::Result<Self> {
+        let planner = DwaPlanner::new_from_config(planner_config_path)?;
+        Ok(Self {
             layered_grid_map: Default::default(),
             angle_table: Default::default(),
             robot_path: Default::default(),
@@ -26,7 +28,15 @@ impl Default for NavigationViz {
             is_run: Arc::new(Mutex::new(true)),
             start_position: Arc::new(Mutex::new(Pose::new(Vector2::new(-1.6, -1.8), 0.0))),
             goal_position: Arc::new(Mutex::new(Pose::new(Vector2::new(5.0, 1.0), 0.0))),
-            planner: Arc::new(Mutex::new(DwaPlanner::default())),
-        }
+            planner: Arc::new(Mutex::new(planner)),
+            planner_config_path: planner_config_path.to_string(),
+        })
+    }
+
+    pub fn reload_planner(&self) -> openrr_nav::Result<()> {
+        let planner = DwaPlanner::new_from_config(&self.planner_config_path)?;
+        let mut locked_planner = self.planner.lock();
+        *locked_planner = planner;
+        Ok(())
     }
 }

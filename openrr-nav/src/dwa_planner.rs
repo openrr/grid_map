@@ -157,11 +157,6 @@ impl DwaPlanner {
         Ok(config.dwa_planner)
     }
 
-    pub fn update_params_from_config(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
-        *self = Self::new_from_config(path)?;
-        Ok(())
-    }
-
     /// Get candidate velocities from current velocity
     pub(crate) fn sample_velocity(&self, current_velocity: &Velocity) -> Vec<Velocity> {
         let max_x_limit = (current_velocity.x + self.limits.max_accel.x * self.controller_dt)

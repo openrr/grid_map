@@ -21,6 +21,7 @@ prost-types.workspace = true
 prost.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tonic.workspace = true
+clap.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

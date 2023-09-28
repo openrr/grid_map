@@ -4,12 +4,13 @@
 // # start viewer
 // cargo run --release -p openrr-nav-viewer
 // # start controller example
-// cargo run --release -p openrr-nav-viewer --example controller
+// cargo run --release -p openrr-nav-viewer --example controller -- -f openrr-nav/config/dwa_parameter_config.yaml
 // ```
 
 mod shared;
 
 use anyhow::Result;
+use clap::Parser;
 use grid_map::*;
 use openrr_nav::{utils::nearest_path_point, *};
 use openrr_nav_viewer::*;
@@ -20,12 +21,10 @@ const ENDPOINT: &str = "http://[::1]:50101";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
     let mut api = pb::api_client::ApiClient::connect(ENDPOINT).await?;
     api.set_config(pb::Config {
-        text: std::fs::read_to_string(format!(
-            "{}/../openrr-nav/config/dwa_parameter_config.yaml",
-            env!("CARGO_MANIFEST_DIR")
-        ))?,
+        text: std::fs::read_to_string(&args.planner_config_path)?,
     })
     .await?;
     loop {
