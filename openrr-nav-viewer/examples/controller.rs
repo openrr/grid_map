@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
 async fn controller(
     api: &mut openrr_nav_viewer::pb::api_client::ApiClient<tonic::transport::Channel>,
 ) -> Result<()> {
-    if !api.get_is_run(()).await?.into_inner().is_run {
+    if !api.get_is_run(()).await?.into_inner() {
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         return Ok(());
     }
@@ -261,6 +261,6 @@ async fn controller(
             break;
         }
     }
-    api.set_is_run(pb::IsRun { is_run: false }).await?;
+    api.set_is_run(false).await?;
     Ok(())
 }

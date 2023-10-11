@@ -3,18 +3,19 @@ syntax = "proto3";
 package openrr_nav_viewer;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 service Api {
   rpc GetStartPosition(google.protobuf.Empty) returns (Isometry2);
   rpc GetGoalPosition(google.protobuf.Empty) returns (Isometry2);
-  rpc GetIsRun(google.protobuf.Empty) returns (IsRun);
+  rpc GetIsRun(google.protobuf.Empty) returns (google.protobuf.BoolValue);
   rpc SetGlobalPath(RobotPath) returns (google.protobuf.Empty);
   rpc SetLocalPathAndCandidates(PathAndCandidates) returns (google.protobuf.Empty);
   rpc SetLayeredGridMap(SetLayeredGridMapRequest) returns (google.protobuf.Empty);
   rpc SetAngleTable(SetAngleTableRequest) returns (google.protobuf.Empty);
   rpc SetCurrentPose(Isometry2) returns (google.protobuf.Empty);
   rpc SetConfig(Config) returns (google.protobuf.Empty);
-  rpc SetIsRun(IsRun) returns (google.protobuf.Empty);
+  rpc SetIsRun(google.protobuf.BoolValue) returns (google.protobuf.Empty);
   rpc PlanLocalPath(PlanRequest) returns (Plan);
   rpc PredictedPlanCandidates(PlanRequest) returns (Candidates);
 }
@@ -72,10 +73,6 @@ message SetAngleTableRequest {
 message NamedAngle {
   string name = 1;
   double angle = 2;
-}
-
-message IsRun {
-  bool is_run = 1;
 }
 
 message RobotPath {

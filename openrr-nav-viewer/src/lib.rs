@@ -31,10 +31,8 @@ impl pb::api_server::Api for NavigationViz {
     async fn get_is_run(
         &self,
         _request: tonic::Request<()>,
-    ) -> Result<tonic::Response<pb::IsRun>, tonic::Status> {
-        Ok(tonic::Response::new(pb::IsRun {
-            is_run: *self.is_run.lock(),
-        }))
+    ) -> Result<tonic::Response<bool>, tonic::Status> {
+        Ok(tonic::Response::new(*self.is_run.lock()))
     }
     async fn set_global_path(
         &self,
@@ -106,9 +104,9 @@ impl pb::api_server::Api for NavigationViz {
     }
     async fn set_is_run(
         &self,
-        request: tonic::Request<pb::IsRun>,
+        request: tonic::Request<bool>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        *self.is_run.lock() = request.into_inner().is_run;
+        *self.is_run.lock() = request.into_inner();
         Ok(tonic::Response::new(()))
     }
     async fn plan_local_path(
