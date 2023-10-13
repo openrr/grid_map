@@ -1,10 +1,13 @@
 use crate::DwaPlanner;
-use crate::{path_distance_map, obstacle_distance_map, goal_distance_map};
+use crate::{goal_distance_map, obstacle_distance_map, path_distance_map};
 use arci::MoveBase;
+use grid_map::{LayeredGridMap, Result};
 use std::collections::HashMap;
-use grid_map::{LayeredGridMap};
 
-pub struct LocalPlanExecutor<T> where T: MoveBase {
+pub struct LocalPlanExecutor<T>
+where
+    T: MoveBase,
+{
     /// local planner
     /// TODO: Support more planners
     move_base: T,
@@ -14,8 +17,16 @@ pub struct LocalPlanExecutor<T> where T: MoveBase {
     goal_threshold: f64,
 }
 
-impl<T> LocalPlanExecutor<T> where T: MoveBase {
-    pub fn new(move_base: T, local_planner: DwaPlanner, weights: HashMap<String, f64>, goal_threshold: f64) -> Self {
+impl<T> LocalPlanExecutor<T>
+where
+    T: MoveBase,
+{
+    pub fn new(
+        move_base: T,
+        local_planner: DwaPlanner,
+        weights: HashMap<String, f64>,
+        goal_threshold: f64,
+    ) -> Self {
         Self {
             move_base,
             local_planner,
@@ -25,6 +36,6 @@ impl<T> LocalPlanExecutor<T> where T: MoveBase {
         }
     }
     pub fn exec_once() -> Result<()> {
-
+        todo!()
     }
 }
