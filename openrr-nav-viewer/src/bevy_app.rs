@@ -144,7 +144,7 @@ fn update_system(
     egui::CentralPanel::default().show(ctx, |ui| {
         Plot::new("Map").data_aspect(1.).show(ui, |plot_ui| {
             // Plot map
-            let map = res_nav.layered_grid_map.lock();
+            let map = res_nav.layered_grid_map.lock().unwrap();
             match map_type.as_ref() {
                 MapType::PathDistanceMap => {
                     if let Some(dist_map) = map.layer(PATH_DISTANCE_MAP_NAME) {
@@ -177,7 +177,7 @@ fn update_system(
             }
 
             // Plot path
-            let path = res_nav.robot_path.lock();
+            let path = res_nav.robot_path.lock().unwrap();
             plot_ui.line(robot_path_to_line(path.global_path(), Color32::BLUE, 10.));
             plot_ui.line(robot_path_to_line(path.local_path(), Color32::RED, 10.));
             for (_, p) in path.get_user_defined_path_as_iter() {
@@ -185,7 +185,7 @@ fn update_system(
             }
 
             // Plot robot pose
-            let pose = res_nav.robot_pose.lock();
+            let pose = res_nav.robot_pose.lock().unwrap();
             plot_ui.polygon(robot_pose_to_polygon(&pose, Color32::DARK_RED, 1.));
 
             let pointer_coordinate = plot_ui.pointer_coordinate();
@@ -196,7 +196,7 @@ fn update_system(
                     && ui_checkboxes.counter == 1
                 {
                     ui_checkboxes.set_start = false;
-                    let mut start_position = res_nav.start_position.lock();
+                    let mut start_position = res_nav.start_position.lock().unwrap();
                     let angle = (p.y - start_position.translation.y)
                         .atan2(p.x - start_position.translation.x);
                     *start_position = Pose::new(
@@ -212,7 +212,7 @@ fn update_system(
                     && !ctx.is_pointer_over_area()
                     && ui_checkboxes.counter == 0
                 {
-                    let mut start_position = res_nav.start_position.lock();
+                    let mut start_position = res_nav.start_position.lock().unwrap();
                     *start_position = Pose::new(Vector2::new(p.x, p.y), 0.0);
                     ui_checkboxes.counter = 1;
                     displayed_arrows.set_start([p.x, p.y]);
@@ -228,7 +228,7 @@ fn update_system(
                     && ui_checkboxes.counter == 1
                 {
                     ui_checkboxes.set_goal = false;
-                    let mut goal_position = res_nav.goal_position.lock();
+                    let mut goal_position = res_nav.goal_position.lock().unwrap();
                     let angle = (p.y - goal_position.translation.y)
                         .atan2(p.x - goal_position.translation.x);
                     *goal_position = Pose::new(
@@ -236,7 +236,7 @@ fn update_system(
                         angle,
                     );
                     println!("goal: {:?}", goal_position);
-                    let mut is_run = res_nav.is_run.lock();
+                    let mut is_run = res_nav.is_run.lock().unwrap();
                     *is_run = true;
                     ui_checkboxes.counter = 0;
                     displayed_arrows.0 = None;
@@ -246,7 +246,7 @@ fn update_system(
                     && !ctx.is_pointer_over_area()
                     && ui_checkboxes.counter == 0
                 {
-                    let mut goal_position = res_nav.goal_position.lock();
+                    let mut goal_position = res_nav.goal_position.lock().unwrap();
                     *goal_position = Pose::new(Vector2::new(p.x, p.y), 0.0);
                     ui_checkboxes.counter = 1;
                     displayed_arrows.set_start([p.x, p.y]);
@@ -323,7 +323,7 @@ fn ui_system(
             ui.label("");
 
             {
-                let mut planner = res_nav.planner.lock();
+                let mut planner = res_nav.planner.lock().unwrap();
                 let weight = planner.map_name_weight_mut();
                 let mut path_weight = weight
                     .get(PATH_DISTANCE_MAP_NAME)
@@ -423,7 +423,7 @@ fn ui_system(
                         .add_sized([200., 30.], egui::Button::new("Rerun"))
                         .clicked()
                     {
-                        let mut is_run = res_nav.is_run.lock();
+                        let mut is_run = res_nav.is_run.lock().unwrap();
                         *is_run = true;
                     }
                 });
@@ -467,7 +467,7 @@ fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>
     egui::TopBottomPanel::bottom("monitor")
         .default_height(150.)
         .show(ctx, |ui| {
-            let angle_table = res_nav.angle_table.lock();
+            let angle_table = res_nav.angle_table.lock().unwrap();
 
             ui.columns(angle_table.len(), |c_ui| {
                 let mut circle_points = vec![];

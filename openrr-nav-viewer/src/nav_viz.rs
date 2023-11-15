@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use grid_map::*;
 use openrr_nav::*;
-use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Clone, Resource)]
 pub struct NavigationViz {
@@ -35,7 +37,7 @@ impl NavigationViz {
 
     pub fn reload_planner(&self) -> openrr_nav::Result<()> {
         let planner = DwaPlanner::new_from_config(&self.planner_config_path)?;
-        let mut locked_planner = self.planner.lock();
+        let mut locked_planner = self.planner.lock().unwrap();
         *locked_planner = planner;
         Ok(())
     }
