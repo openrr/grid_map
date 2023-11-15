@@ -25,12 +25,12 @@ fn main() {
     .unwrap();
 
     {
-        let mut locked_planner = cloned_nav.planner.lock();
+        let mut locked_planner = cloned_nav.planner.lock().unwrap();
         *locked_planner = planner;
     }
 
     std::thread::spawn(move || loop {
-        if !cloned_nav.is_run.lock().to_owned() {
+        if !*cloned_nav.is_run.lock().unwrap() {
             std::thread::sleep(std::time::Duration::from_millis(10));
             continue;
         }
@@ -40,13 +40,13 @@ fn main() {
         let start;
         let goal;
         {
-            let locked_start = cloned_nav.start_position.lock();
+            let locked_start = cloned_nav.start_position.lock().unwrap();
             start = [
                 locked_start.translation.x,
                 locked_start.translation.y,
                 locked_start.rotation.angle(),
             ];
-            let locked_goal = cloned_nav.goal_position.lock();
+            let locked_goal = cloned_nav.goal_position.lock().unwrap();
             goal = [
                 locked_goal.translation.x,
                 locked_goal.translation.y,
@@ -79,7 +79,7 @@ fn main() {
             &Pose::new(Vector2::new(goal[0], goal[1]), goal[2]),
         );
         {
-            let mut locked_robot_path = cloned_nav.robot_path.lock();
+            let mut locked_robot_path = cloned_nav.robot_path.lock().unwrap();
             locked_robot_path.set_global_path(robot_path_from_vec_vec(result.clone()));
         }
         let path_grid = result
@@ -102,7 +102,7 @@ fn main() {
             local_goal_distance_map(&map, &result, [start[0], start[1]]).unwrap();
 
         {
-            let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+            let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock().unwrap();
             locked_layered_grid_map.add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
             locked_layered_grid_map.add_layer(GOAL_DISTANCE_MAP_NAME.to_owned(), goal_distance_map);
             locked_layered_grid_map
@@ -114,7 +114,7 @@ fn main() {
         }
 
         {
-            let mut locked_angle_table = cloned_nav.angle_table.lock();
+            let mut locked_angle_table = cloned_nav.angle_table.lock().unwrap();
             locked_angle_table.insert(ROTATION_COST_NAME.to_owned(), start[2]);
             locked_angle_table.insert(PATH_DIRECTION_COST_NAME.to_owned(), start[2]);
             locked_angle_table.insert(GOAL_DIRECTION_COST_NAME.to_owned(), goal[2]);
@@ -146,7 +146,7 @@ fn main() {
             .unwrap();
 
             {
-                let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
+                let mut locked_layered_grid_map = cloned_nav.layered_grid_map.lock().unwrap();
                 locked_layered_grid_map
                     .add_layer(PATH_DISTANCE_MAP_NAME.to_owned(), path_distance_map);
                 locked_layered_grid_map
@@ -165,7 +165,7 @@ fn main() {
                     [current_pose.translation.x, current_pose.translation.y],
                 );
                 let len = result.len();
-                let mut locked_angle_table = cloned_nav.angle_table.lock();
+                let mut locked_angle_table = cloned_nav.angle_table.lock().unwrap();
                 locked_angle_table
                     .insert(ROTATION_COST_NAME.to_owned(), current_pose.rotation.angle());
                 const FORWARD_OFFSET: usize = 20;
@@ -179,9 +179,9 @@ fn main() {
             }
 
             let (plan, candidates) = {
-                let locked_layered_grid_map = cloned_nav.layered_grid_map.lock();
-                let locked_angle_table = cloned_nav.angle_table.lock();
-                let locked_planner = cloned_nav.planner.lock();
+                let locked_layered_grid_map = cloned_nav.layered_grid_map.lock().unwrap();
+                let locked_angle_table = cloned_nav.angle_table.lock().unwrap();
+                let locked_planner = cloned_nav.planner.lock().unwrap();
                 (
                     locked_planner.plan_local_path(
                         &current_pose,
@@ -193,7 +193,7 @@ fn main() {
                 )
             };
             {
-                let mut locked_robot_path = cloned_nav.robot_path.lock();
+                let mut locked_robot_path = cloned_nav.robot_path.lock().unwrap();
                 locked_robot_path.set_local_path(RobotPath(plan.path.clone()));
                 for (i, candidate) in candidates.iter().enumerate() {
                     locked_robot_path.add_user_defined_path(
@@ -207,7 +207,7 @@ fn main() {
             current_pose = plan.path[0];
 
             {
-                let mut locked_robot_pose = cloned_nav.robot_pose.lock();
+                let mut locked_robot_pose = cloned_nav.robot_pose.lock().unwrap();
                 *locked_robot_pose = current_pose;
             }
             std::thread::sleep(std::time::Duration::from_millis(50));
@@ -232,7 +232,7 @@ fn main() {
             }
         }
         {
-            let mut is_run = cloned_nav.is_run.lock();
+            let mut is_run = cloned_nav.is_run.lock().unwrap();
             *is_run = false;
         }
     });

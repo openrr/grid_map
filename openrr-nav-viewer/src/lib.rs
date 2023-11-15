@@ -18,21 +18,21 @@ impl pb::api_server::Api for NavigationViz {
         &self,
         _request: tonic::Request<()>,
     ) -> Result<tonic::Response<pb::Isometry2>, tonic::Status> {
-        let start = self.start_position.lock();
+        let start = self.start_position.lock().unwrap();
         Ok(tonic::Response::new((*start).into()))
     }
     async fn get_goal_position(
         &self,
         _request: tonic::Request<()>,
     ) -> Result<tonic::Response<pb::Isometry2>, tonic::Status> {
-        let goal = self.goal_position.lock();
+        let goal = self.goal_position.lock().unwrap();
         Ok(tonic::Response::new((*goal).into()))
     }
     async fn get_is_run(
         &self,
         _request: tonic::Request<()>,
     ) -> Result<tonic::Response<bool>, tonic::Status> {
-        Ok(tonic::Response::new(*self.is_run.lock()))
+        Ok(tonic::Response::new(*self.is_run.lock().unwrap()))
     }
     async fn set_global_path(
         &self,
@@ -40,6 +40,7 @@ impl pb::api_server::Api for NavigationViz {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         self.robot_path
             .lock()
+            .unwrap()
             .set_global_path(request.into_inner().into());
         Ok(tonic::Response::new(()))
     }
@@ -48,7 +49,7 @@ impl pb::api_server::Api for NavigationViz {
         request: tonic::Request<pb::PathAndCandidates>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let pb::PathAndCandidates { path, candidates } = request.into_inner();
-        let mut robot_path = self.robot_path.lock();
+        let mut robot_path = self.robot_path.lock().unwrap();
         robot_path.set_local_path(path.unwrap().into());
         for (i, candidate) in candidates.into_iter().enumerate() {
             robot_path.add_user_defined_path(
@@ -63,7 +64,7 @@ impl pb::api_server::Api for NavigationViz {
         request: tonic::Request<pb::SetLayeredGridMapRequest>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let pb::SetLayeredGridMapRequest { maps } = request.into_inner();
-        let mut layered_grid_map = self.layered_grid_map.lock();
+        let mut layered_grid_map = self.layered_grid_map.lock().unwrap();
         for named_map in maps {
             layered_grid_map.add_layer(named_map.name, named_map.map.unwrap().into());
         }
@@ -74,7 +75,7 @@ impl pb::api_server::Api for NavigationViz {
         request: tonic::Request<pb::SetAngleTableRequest>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let pb::SetAngleTableRequest { table } = request.into_inner();
-        let mut angle_table = self.angle_table.lock();
+        let mut angle_table = self.angle_table.lock().unwrap();
         for angle in table {
             angle_table.insert(angle.name, angle.angle);
         }
@@ -84,7 +85,7 @@ impl pb::api_server::Api for NavigationViz {
         &self,
         request: tonic::Request<pb::Isometry2>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        *self.robot_pose.lock() = request.into_inner().into();
+        *self.robot_pose.lock().unwrap() = request.into_inner().into();
         Ok(tonic::Response::new(()))
     }
     async fn set_config(
@@ -93,7 +94,7 @@ impl pb::api_server::Api for NavigationViz {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let text = request.into_inner().text;
         match openrr_nav::DwaPlanner::new_from_config_text(&text) {
-            Ok(new) => *self.planner.lock() = new,
+            Ok(new) => *self.planner.lock().unwrap() = new,
             Err(e) => {
                 return Err(tonic::Status::invalid_argument(format!(
                     "failed to parse config: {e}"
@@ -106,7 +107,7 @@ impl pb::api_server::Api for NavigationViz {
         &self,
         request: tonic::Request<bool>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        *self.is_run.lock() = request.into_inner();
+        *self.is_run.lock().unwrap() = request.into_inner();
         Ok(tonic::Response::new(()))
     }
     async fn plan_local_path(
@@ -117,9 +118,9 @@ impl pb::api_server::Api for NavigationViz {
             current_pose,
             current_velocity,
         } = request.into_inner();
-        let layered_grid_map = self.layered_grid_map.lock();
-        let angle_table = self.angle_table.lock();
-        let planner = self.planner.lock();
+        let layered_grid_map = self.layered_grid_map.lock().unwrap();
+        let angle_table = self.angle_table.lock().unwrap();
+        let planner = self.planner.lock().unwrap();
         let plan = planner.plan_local_path(
             &current_pose.unwrap().into(),
             &current_velocity.unwrap().into(),
@@ -136,7 +137,7 @@ impl pb::api_server::Api for NavigationViz {
             current_pose,
             current_velocity,
         } = request.into_inner();
-        let planner = self.planner.lock();
+        let planner = self.planner.lock().unwrap();
         let candidates = planner.predicted_plan_candidates(
             &current_pose.unwrap().into(),
             &current_velocity.unwrap().into(),

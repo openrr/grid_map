@@ -16,7 +16,6 @@ bevy.workspace = true
 grid_map.workspace = true
 nalgebra.workspace = true
 openrr-nav.workspace = true
-parking_lot.workspace = true
 prost-types.workspace = true
 prost.workspace = true
 tokio = { workspace = true, features = ["full"] }
