@@ -133,11 +133,11 @@ impl BevyAppNav {
 }
 
 fn update_system(
-    mut contexts: EguiContexts,
-    res_nav: Res<NavigationViz>,
-    map_type: Res<MapType>,
-    mut ui_checkboxes: ResMut<UiCheckboxes>,
-    mut displayed_arrows: ResMut<DisplayedArrows>,
+    mut contexts: EguiContexts<'_, '_>,
+    res_nav: Res<'_, NavigationViz>,
+    map_type: Res<'_, MapType>,
+    mut ui_checkboxes: ResMut<'_, UiCheckboxes>,
+    mut displayed_arrows: ResMut<'_, DisplayedArrows>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -267,10 +267,10 @@ fn update_system(
 }
 
 fn ui_system(
-    mut contexts: EguiContexts,
-    res_nav: Res<NavigationViz>,
-    mut map_type: ResMut<MapType>,
-    mut ui_checkboxes: ResMut<UiCheckboxes>,
+    mut contexts: EguiContexts<'_, '_>,
+    res_nav: Res<'_, NavigationViz>,
+    mut map_type: ResMut<'_, MapType>,
+    mut ui_checkboxes: ResMut<'_, UiCheckboxes>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -461,7 +461,7 @@ fn ui_system(
         });
 }
 
-fn bottom_monitor_system(mut contexts: EguiContexts, res_nav: Res<NavigationViz>) {
+fn bottom_monitor_system(mut contexts: EguiContexts<'_, '_>, res_nav: Res<'_, NavigationViz>) {
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::bottom("monitor")
