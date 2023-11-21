@@ -9,7 +9,7 @@ struct Args {
         env = "PLANNER_CONFIG_PATH",
         help = "planner config file path"
     )]
-    pub planner_config_path: String,
+    planner_config_path: String,
 }
 
 impl TryFrom<Args> for NavigationViz {

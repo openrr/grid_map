@@ -31,7 +31,7 @@ struct GridPositionConverter {
 
 impl GridPositionConverter {
     /// Create grid position converter
-    pub fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
+    fn new(min_point: Position, max_point: Position, resolution: f64) -> Self {
         let width = ((max_point.x - min_point.x) / resolution) as usize;
         let height = ((max_point.y - min_point.y) / resolution) as usize;
         let size = Size::new(width, height);
@@ -42,19 +42,19 @@ impl GridPositionConverter {
             size,
         }
     }
-    pub fn resolution(&self) -> f64 {
+    fn resolution(&self) -> f64 {
         self.resolution
     }
-    pub fn min_point(&self) -> &Position {
+    fn min_point(&self) -> &Position {
         &self.min_point
     }
-    pub fn max_point(&self) -> &Position {
+    fn max_point(&self) -> &Position {
         &self.max_point
     }
-    pub fn size(&self) -> &Size {
+    fn size(&self) -> &Size {
         &self.size
     }
-    pub fn to_grid(&self, position: &Position) -> Option<Grid> {
+    fn to_grid(&self, position: &Position) -> Option<Grid> {
         if position.x < self.min_point.x || position.y < self.min_point.y {
             return None;
         }
@@ -65,7 +65,7 @@ impl GridPositionConverter {
         }
         Some(Grid { x, y })
     }
-    pub fn to_index(&self, grid: &Grid) -> Option<usize> {
+    fn to_index(&self, grid: &Grid) -> Option<usize> {
         if grid.x >= self.size.width || grid.y >= self.size.height {
             return None;
         }
