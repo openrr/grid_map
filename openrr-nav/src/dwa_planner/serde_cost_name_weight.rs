@@ -9,7 +9,7 @@ struct CostNameWeightPair {
     value: f64,
 }
 
-pub fn serialize<S: Serializer>(
+pub(crate) fn serialize<S: Serializer>(
     data: &HashMap<String, f64>,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
@@ -23,7 +23,7 @@ pub fn serialize<S: Serializer>(
     pairs.serialize(serializer)
 }
 
-pub fn deserialize<'de, D: Deserializer<'de>>(
+pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<HashMap<String, f64>, D::Error> {
     let pairs = Vec::<CostNameWeightPair>::deserialize(deserializer)?;

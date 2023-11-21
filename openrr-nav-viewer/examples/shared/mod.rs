@@ -27,7 +27,7 @@ impl TryFrom<Args> for NavigationViz {
     }
 }
 
-pub fn new_sample_map() -> GridMap<u8> {
+pub(crate) fn new_sample_map() -> GridMap<u8> {
     let mut map =
         grid_map::GridMap::<u8>::new(Position::new(-2.05, -2.05), Position::new(6.05, 2.05), 0.05);
     for i in 20..100 {
@@ -41,7 +41,7 @@ pub fn new_sample_map() -> GridMap<u8> {
     map
 }
 
-pub fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
+pub(crate) fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
     let mut robot_path_inner = vec![];
     for p in path {
         let pose = na::Isometry2::new(na::Vector2::new(p[0], p[1]), 0.);
@@ -51,7 +51,7 @@ pub fn robot_path_from_vec_vec(path: Vec<Vec<f64>>) -> RobotPath {
     RobotPath(robot_path_inner)
 }
 
-pub fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f64>> {
+pub(crate) fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<Vec<f64>> {
     if path.len() < 2 {
         return path;
     }
@@ -89,7 +89,10 @@ pub fn linear_interpolate_path(path: Vec<Vec<f64>>, extend_length: f64) -> Vec<V
     interpolated_path
 }
 
-pub fn add_target_position_to_path(path: Vec<Vec<f64>>, target_pose: &Pose) -> Vec<Vec<f64>> {
+pub(crate) fn add_target_position_to_path(
+    path: Vec<Vec<f64>>,
+    target_pose: &Pose,
+) -> Vec<Vec<f64>> {
     let mut p = path.clone();
     let target_pose_vec = vec![
         target_pose.translation.x,

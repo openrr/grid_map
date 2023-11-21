@@ -9,6 +9,8 @@ pub use map_type::*;
 pub use nav_viz::*;
 
 pub mod pb {
+    #![allow(unreachable_pub)]
+
     tonic::include_proto!("openrr_nav_viewer");
 }
 
