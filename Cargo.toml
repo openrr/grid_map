@@ -38,6 +38,7 @@ openrr-nav = { path = "openrr-nav" }
 debug = true
 
 [workspace.lints.rust]
+missing_debug_implementations = "warn"
 # missing_docs = "warn" # TODO
 rust_2018_idioms = "warn"
 single_use_lifetimes = "warn"

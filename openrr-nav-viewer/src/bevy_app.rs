@@ -77,7 +77,7 @@ impl DisplayedArrows {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct BevyAppNav {
     app: App,
 }
