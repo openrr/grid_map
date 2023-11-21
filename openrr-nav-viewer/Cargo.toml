@@ -26,3 +26,6 @@ clap.workspace = true
 anyhow.workspace = true
 rand.workspace = true
 rrt.workspace = true
+
+[lints]
+workspace = true
